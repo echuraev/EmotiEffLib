@@ -27,9 +27,18 @@ jobs:
       - name: Run isort
         run: isort --check-only --diff .
 
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        # To compare changes between the current commit and the last pushed remote commit set `since_last_remote_commit: true`. e.g
+        # with:
+        #   since_last_remote_commit: true
+
       - name: Run Pylint on changed files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.py$')
+          files=$(echo "$ALL_CHANGED_FILES" | tr ' ' '\n' | grep '\.py$' || true)
           if [ -n "$files" ]; then
             pylint $files
           else
