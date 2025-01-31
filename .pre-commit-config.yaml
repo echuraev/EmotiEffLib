@@ -15,3 +15,5 @@ repos:
     rev: v3.1.0
     hooks:
       - id: pylint
+        args: [src, --disable=import-error]
+        files: ^hsei/
