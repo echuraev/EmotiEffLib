@@ -1,6 +1,8 @@
 # https://www.tensorflow.org/lite/performance/post_training_quantization
 # https://gist.github.com/NobuoTsukamoto/b42128104531a7612e5c85e246cb2dac
-import sys, os
+import os
+import sys
+
 import tensorflow as tf
 
 

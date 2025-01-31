@@ -3,9 +3,9 @@ Adapted from https://github.com/cavalleria/cavaface.pytorch/blob/master/backbone
 Original author cavalleria
 """
 
-import torch.nn as nn
-from torch.nn import Linear, Conv2d, BatchNorm1d, BatchNorm2d, PReLU, Sequential, Module
 import torch
+import torch.nn as nn
+from torch.nn import BatchNorm1d, BatchNorm2d, Conv2d, Linear, Module, PReLU, Sequential
 
 
 class Flatten(Module):

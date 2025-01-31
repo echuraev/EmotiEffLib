@@ -1,21 +1,17 @@
+import os
+import subprocess
 import sys
-import time
+import textwrap
 import threading
 import time
-import subprocess
-import os
+import wave
 from collections import deque
 
 import cv2
-import numpy as np
 import mediapipe as mp
-
+import numpy as np
 import pyaudio
-import wave
 import speech_recognition as sr
-
-import textwrap
-
 from hsemotion_onnx.facial_emotions import HSEmotionRecognizer
 
 stopEvent = threading.Event()
