@@ -2,15 +2,14 @@
 Facial emotions recognition implementation
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 import urllib.request
+
 import numpy as np
-from PIL import Image
 import torch
+from PIL import Image
 from torchvision import transforms
 
 # def get_path(model_name):

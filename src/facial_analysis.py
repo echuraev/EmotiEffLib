@@ -1,19 +1,17 @@
 # Reduced version of file https://github.com/HSE-asavchenko/HSE_FaceRec_tf/blob/master/age_gender_identity/facial_analysis.py
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import sys
-import os
+from __future__ import absolute_import, division, print_function
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = ''
 import argparse
-import tensorflow as tf
-import numpy as np
-import cv2
+import os
+import re
+import subprocess
+import sys
 import time
 
-import subprocess, re
+import cv2
+import numpy as np
+import tensorflow as tf
 
 
 def is_specialfile(path, exts):

@@ -1,4 +1,5 @@
 import os
+
 import torch
 from torch.utils.mobile_optimizer import optimize_for_mobile
 

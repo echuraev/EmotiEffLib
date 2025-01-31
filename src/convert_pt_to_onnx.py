@@ -1,7 +1,8 @@
 import numpy as np
-import torch, timm
 import onnx
 import onnxruntime as ort
+import timm
+import torch
 
 
 def convert_pt_to_onnx(model_name, img_size=224):

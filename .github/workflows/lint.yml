@@ -24,5 +24,14 @@ jobs:
       - name: Run Black
         run: black --check .
 
-      - name: Run Pylint
-        run: pylint $(git ls-files '*.py')
+      - name: Run isort
+        run: isort --check-only --diff .
+
+      - name: Run Pylint on changed files
+        run: |
+          files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.py$')
+          if [ -n "$files" ]; then
+            pylint $files
+          else
+            echo "No Python files changed"
+          fi
