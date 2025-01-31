@@ -1,0 +1,11 @@
+numpy
+pillow
+opencv-python
+facenet-pytorch
+timm==0.9.*
+torch
+torchvision
+onnx
+onnxruntime
+pylint
+black
