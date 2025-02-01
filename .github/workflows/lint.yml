@@ -20,6 +20,10 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install -r tests/requirements.txt
+
+      - name: Set PYTHONPATH environment variable
+        run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
       - name: Run Black
         run: black --check .
