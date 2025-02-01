@@ -34,6 +34,24 @@ def get_model_path(model_name):
     return fpath
 
 
+def get_model_list():
+    """
+    Returns a list of available model names.
+
+    These models are supported by HSEmoitonRecognizer.
+
+    Returns:
+        list of str: A list of model names.
+    """
+    return [
+        "enet_b0_8_best_vgaf",
+        "enet_b0_8_best_afew",
+        "enet_b2_8",
+        "enet_b0_8_va_mtl",
+        "enet_b2_7",
+    ]
+
+
 class HSEmotionRecognizer:
     """
     HSEmotionRecognizer class
