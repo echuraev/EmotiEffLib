@@ -29,3 +29,16 @@ jobs:
       - name: Run Pytest
         run: |
           pytest --disable-warnings tests/
+
+      - name: Uninstall torch and onnx
+        run: |
+          pip uninstall -y torch torchvision onnx onnxruntime
+
+      - name: Set test environment variables
+        run: |
+          echo "WITHOUT_TORCH=1" >> $GITHUB_ENV
+          echo "WITHOUT_ONNX=1" >> $GITHUB_ENV
+
+      - name: Run Pytest for the module loading
+        run: |
+          pytest --disable-warnings tests/test_module_loading.py

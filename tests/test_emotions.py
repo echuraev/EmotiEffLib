@@ -16,11 +16,14 @@ FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
 @pytest.mark.parametrize("model_name", get_model_list())
-def test_one_image(model_name):
+@pytest.mark.parametrize("engine", ["torch", "onnx"])
+def test_one_image(model_name, engine):
     """
     Simple test with one image
     """
-    if model_name == "enet_b0_8_va_mtl":
+    if model_name == "enet_b0_8_va_mtl" or (
+        engine == "onnx" and model_name == "enet_b0_8_best_afew"
+    ):
         pytest.xfail("This model gives incorrect prediction")
     input_file = os.path.join(FILE_DIR, "..", "test_images", "20180720_174416.jpg")
     use_cuda = torch.cuda.is_available()
@@ -34,7 +37,7 @@ def test_one_image(model_name):
         bounding_boxes = bounding_boxes[probs > 0.9]
         return bounding_boxes
 
-    fer = HSEmotionRecognizer(model_name=model_name, device=device)
+    fer = HSEmotionRecognizer(engine=engine, model_name=model_name, device=device)
     frame_bgr = cv2.imread(input_file)
     frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
