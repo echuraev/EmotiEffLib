@@ -30,7 +30,7 @@ def download_model(model_file, path_in_repo):
     """
     Returns local path to a model
     """
-    cache_dir = os.path.join(os.path.expanduser("~"), ".hsemotion")
+    cache_dir = os.path.join(os.path.expanduser("~"), ".emotiefflib")
     os.makedirs(cache_dir, exist_ok=True)
     fpath = os.path.join(cache_dir, model_file)
     if not os.path.isfile(fpath):
@@ -91,7 +91,7 @@ def get_supported_engines():
     return ["torch", "onnx"]
 
 
-class HSEmotionRecognizerBase(ABC):
+class EmotiEffLibRecognizerBase(ABC):
     """
     Abstract class for emotion recognizer classes
     """
@@ -156,9 +156,9 @@ class HSEmotionRecognizerBase(ABC):
         raise NotImplementedError("It should be implemented")
 
 
-class HSEmotionRecognizerTorch(HSEmotionRecognizerBase):
+class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
     """
-    HSEmotionRecognizer class
+    EmotiEffLibRecognizer class
     """
 
     def __init__(self, model_name="enet_b0_8_best_vgaf", device="cpu"):
@@ -269,9 +269,9 @@ class HSEmotionRecognizerTorch(HSEmotionRecognizerBase):
         return [self.idx_to_class[pred] for pred in preds], scores
 
 
-class HSEmotionRecognizerOnnx(HSEmotionRecognizerBase):
+class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
     """
-    HSEmotionRecognizer class
+    EmotiEffLibRecognizer class
     """
 
     def __init__(self, model_name="enet_b0_8_best_vgaf"):
@@ -361,9 +361,9 @@ class HSEmotionRecognizerOnnx(HSEmotionRecognizerBase):
 
 
 # pylint: disable=invalid-name
-def HSEmotionRecognizer(engine="torch", model_name="enet_b0_8_best_vgaf", device="cpu"):
+def EmotiEffLibRecognizer(engine="torch", model_name="enet_b0_8_best_vgaf", device="cpu"):
     """
-    Creates HSEmotionRecognizer instance.
+    Creates EmotiEffLibRecognizer instance.
     """
     # pylint: disable=unused-import, import-outside-toplevel, redefined-outer-name
     if engine not in get_supported_engines():
@@ -374,10 +374,10 @@ def HSEmotionRecognizer(engine="torch", model_name="enet_b0_8_best_vgaf", device
             from torchvision import transforms
         except ImportError as e:
             raise ImportError("Looks like torch module is not installed: ", e) from e
-        return HSEmotionRecognizerTorch(model_name, device)
+        return EmotiEffLibRecognizerTorch(model_name, device)
     # ONNX
     try:
         import onnxruntime as ort
     except ImportError as e:
         raise ImportError("Looks like torch module is not installed: ", e) from e
-    return HSEmotionRecognizerOnnx(model_name)
+    return EmotiEffLibRecognizerOnnx(model_name)
