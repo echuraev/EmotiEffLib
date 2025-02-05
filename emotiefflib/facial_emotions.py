@@ -5,7 +5,7 @@ Facial emotions recognition implementation
 from __future__ import absolute_import, division, print_function
 
 import os
-import urllib.request
+import pathlib
 from abc import ABC, abstractmethod
 
 import cv2
@@ -17,32 +17,14 @@ try:
 except ImportError:
     pass
 try:
+    import onnx
     import onnxruntime as ort
+    from onnx import TensorProto, helper, numpy_helper
 except ImportError:
     pass
 from PIL import Image
 
-# def get_path(model_name):
-#    return '../../models/affectnet_emotions/'+model_name+'.pt'
-
-
-def download_model(model_file, path_in_repo):
-    """
-    Returns local path to a model
-    """
-    cache_dir = os.path.join(os.path.expanduser("~"), ".emotiefflib")
-    os.makedirs(cache_dir, exist_ok=True)
-    fpath = os.path.join(cache_dir, model_file)
-    if not os.path.isfile(fpath):
-        url = (
-            "https://github.com/HSE-asavchenko/face-emotion-recognition/blob/main/"
-            + path_in_repo
-            + model_file
-            + "?raw=true"
-        )
-        print("Downloading", model_file, "from", url)
-        urllib.request.urlretrieve(url, fpath)
-    return fpath
+FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
 def get_model_path_torch(model_name):
@@ -50,8 +32,8 @@ def get_model_path_torch(model_name):
     Returns local path to a torch model
     """
     model_file = model_name + ".pt"
-    path_in_repo = "models/affectnet_emotions/"
-    return download_model(model_file, path_in_repo)
+    path_in_repo = os.path.join(FILE_DIR, "..", "models", "affectnet_emotions")
+    return os.path.join(path_in_repo, model_file)
 
 
 def get_model_path_onnx(model_name):
@@ -59,8 +41,8 @@ def get_model_path_onnx(model_name):
     Returns local path to an ONNX model
     """
     model_file = model_name + ".onnx"
-    path_in_repo = "models/affectnet_emotions/onnx/"
-    return download_model(model_file, path_in_repo)
+    path_in_repo = os.path.join(FILE_DIR, "..", "models", "affectnet_emotions", "onnx")
+    return os.path.join(path_in_repo, model_file)
 
 
 def get_model_list():
@@ -119,6 +101,15 @@ class EmotiEffLibRecognizerBase(ABC):
                 6: "Sadness",
                 7: "Surprise",
             }
+        self.classifier_weights = None
+        self.classifier_bias = None
+
+    def _get_probab(self, features):
+        """
+        Returns probab
+        """
+        x = np.dot(features, np.transpose(self.classifier_weights)) + self.classifier_bias
+        return x
 
     @abstractmethod
     def _preprocess(self, img):
@@ -135,25 +126,56 @@ class EmotiEffLibRecognizerBase(ABC):
         raise NotImplementedError("It should be implemented")
 
     @abstractmethod
-    def predict_emotions(self, face_img, logits=True):
-        """
-        Predict emotions for facial image
-        """
-        raise NotImplementedError("It should be implemented")
-
-    @abstractmethod
     def extract_multi_features(self, face_img_list):
         """
         Extract multi features from a sequence of facial images
         """
         raise NotImplementedError("It should be implemented")
 
-    @abstractmethod
     def predict_multi_emotions(self, face_img_list, logits=True):
         """
         Predict emotions on a sequence of facial images
         """
-        raise NotImplementedError("It should be implemented")
+        features = self.extract_multi_features(face_img_list)
+        scores = self._get_probab(features)
+        if self.is_mtl:
+            preds = np.argmax(scores[:, :-2], axis=1)
+        else:
+            preds = np.argmax(scores, axis=1)
+        if self.is_mtl:
+            x = scores[:, :-2]
+        else:
+            x = scores
+
+        if not logits:
+            e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
+            e_x = e_x / e_x.sum(axis=1)[:, None]
+            if self.is_mtl:
+                scores[:, :-2] = e_x
+            else:
+                scores = e_x
+
+        return [self.idx_to_class[pred] for pred in preds], scores
+
+    def predict_emotions(self, face_img, logits=True):
+        """
+        Predict emotions for facial image
+        """
+        features = self.extract_features(face_img)
+        scores = self._get_probab(features)[0]
+        if self.is_mtl:
+            x = scores[:-2]
+        else:
+            x = scores
+        pred = np.argmax(x)
+        if not logits:
+            e_x = np.exp(x - np.max(x)[np.newaxis])
+            e_x = e_x / e_x.sum()[None]
+            if self.is_mtl:
+                scores[:-2] = e_x
+            else:
+                scores = e_x
+        return self.idx_to_class[pred], scores
 
 
 class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
@@ -196,13 +218,6 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
         )
         return test_transforms(Image.fromarray(img))
 
-    def get_probab(self, features):
-        """
-        Returns probab
-        """
-        x = np.dot(features, np.transpose(self.classifier_weights)) + self.classifier_bias
-        return x
-
     def extract_features(self, face_img):
         """
         Extract features from facial image
@@ -213,27 +228,6 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
         features = features.data.cpu().numpy()
         return features
 
-    def predict_emotions(self, face_img, logits=True):
-        """
-        Predict emotions for facial image
-        """
-        features = self.extract_features(face_img)
-        scores = self.get_probab(features)[0]
-        if self.is_mtl:
-            x = scores[:-2]
-        else:
-            x = scores
-        pred = np.argmax(x)
-
-        if not logits:
-            e_x = np.exp(x - np.max(x)[np.newaxis])
-            e_x = e_x / e_x.sum()[None]
-            if self.is_mtl:
-                scores[:-2] = e_x
-            else:
-                scores = e_x
-        return self.idx_to_class[pred], scores
-
     def extract_multi_features(self, face_img_list):
         """
         Extract multi features from a sequence of facial images
@@ -242,31 +236,6 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
         features = self.model(torch.stack(imgs, dim=0).to(self.device))
         features = features.data.cpu().numpy()
         return features
-
-    def predict_multi_emotions(self, face_img_list, logits=True):
-        """
-        Predict emotions on a sequence of facial images
-        """
-        features = self.extract_multi_features(face_img_list)
-        scores = self.get_probab(features)
-        if self.is_mtl:
-            preds = np.argmax(scores[:, :-2], axis=1)
-        else:
-            preds = np.argmax(scores, axis=1)
-        if self.is_mtl:
-            x = scores[:, :-2]
-        else:
-            x = scores
-
-        if not logits:
-            e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
-            e_x = e_x / e_x.sum(axis=1)[:, None]
-            if self.is_mtl:
-                scores[:, :-2] = e_x
-            else:
-                scores = e_x
-
-        return [self.idx_to_class[pred] for pred in preds], scores
 
 
 class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
@@ -292,7 +261,32 @@ class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
                 self.img_size = 224
 
         path = get_model_path_onnx(model_name)
-        self.ort_session = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+        model = onnx.load(path)
+        graph = model.graph
+        nodes = graph.node
+        gemm_node = nodes[-1]
+        new_output_name = gemm_node.input[0]
+        if gemm_node is None or len(gemm_node.input) < 3:
+            raise RuntimeError("Unexpected gemm node!")
+        weight_name = gemm_node.input[1]
+        bias_name = gemm_node.input[2]
+        weight_tensor = next((t for t in graph.initializer if t.name == weight_name), None)
+        bias_tensor = next((t for t in graph.initializer if t.name == bias_name), None)
+        self.classifier_weights = numpy_helper.to_array(weight_tensor) if weight_tensor else None
+        self.classifier_bias = numpy_helper.to_array(bias_tensor) if bias_tensor else None
+
+        # Remove the last node
+        graph.node.remove(gemm_node)
+        graph.output.remove(graph.output[0])
+        new_output_shape = [None, self.classifier_weights.shape[1]]
+        new_output = helper.make_tensor_value_info(
+            new_output_name, TensorProto.FLOAT, new_output_shape
+        )
+        graph.output.append(new_output)
+
+        model_bytes = model.SerializeToString()
+        ort.set_default_logger_severity(3)
+        self.ort_session = ort.InferenceSession(model_bytes, providers=["CPUExecutionProvider"])
 
     def _preprocess(self, img):
         """
@@ -307,63 +301,35 @@ class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
         """
         Extract features from facial image
         """
-        raise NotImplementedError("It should be implemented")
-
-    def predict_emotions(self, face_img, logits=True):
-        """
-        Predict emotions for facial image
-        """
-        scores = self.ort_session.run(None, {"input": self._preprocess(face_img)})[0][0]
-        if self.is_mtl:
-            x = scores[:-2]
-        else:
-            x = scores
-        pred = np.argmax(x)
-        if not logits:
-            e_x = np.exp(x - np.max(x)[np.newaxis])
-            e_x = e_x / e_x.sum()[None]
-            if self.is_mtl:
-                scores[:-2] = e_x
-            else:
-                scores = e_x
-        return self.idx_to_class[pred], scores
+        img_tensor = self._preprocess(face_img)
+        features = self.ort_session.run(None, {"input": img_tensor})[0]
+        return features
 
     def extract_multi_features(self, face_img_list):
         """
         Extract multi features from a sequence of facial images
         """
-        raise NotImplementedError("It should be implemented")
-
-    def predict_multi_emotions(self, face_img_list, logits=True):
-        """
-        Predict emotions on a sequence of facial images
-        """
         imgs = np.concatenate([self._preprocess(face_img) for face_img in face_img_list], axis=0)
-        scores = self.ort_session.run(None, {"input": imgs})[0]
-        if self.is_mtl:
-            preds = np.argmax(scores[:, :-2], axis=1)
-        else:
-            preds = np.argmax(scores, axis=1)
-        if self.is_mtl:
-            x = scores[:, :-2]
-        else:
-            x = scores
-
-        if not logits:
-            e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
-            e_x = e_x / e_x.sum(axis=1)[:, None]
-            if self.is_mtl:
-                scores[:, :-2] = e_x
-            else:
-                scores = e_x
-
-        return [self.idx_to_class[pred] for pred in preds], scores
+        features = self.ort_session.run(None, {"input": imgs})[0]
+        return features
 
 
 # pylint: disable=invalid-name
 def EmotiEffLibRecognizer(engine="torch", model_name="enet_b0_8_best_vgaf", device="cpu"):
     """
     Creates EmotiEffLibRecognizer instance.
+
+    Args:
+        engine (str): The engine to use for inference. Can be either "torch" or "onnx".
+                      Default is "torch".
+        model_name (str): The name of the model to be used for emotion prediction.
+                          Default is "enet_b0_8_best_vgaf".
+        device (str): The device on which to run the model, either "cpu" or "cuda".
+                      Default is "cpu".
+
+    Returns:
+        EmotiEffLibRecognizerTorch or EmotiEffLibRecognizerOnnx: An instance of the corresponding
+        emotion recognition class based on the selected engine.
     """
     # pylint: disable=unused-import, import-outside-toplevel, redefined-outer-name
     if engine not in get_supported_engines():
@@ -377,7 +343,9 @@ def EmotiEffLibRecognizer(engine="torch", model_name="enet_b0_8_best_vgaf", devi
         return EmotiEffLibRecognizerTorch(model_name, device)
     # ONNX
     try:
+        import onnx
         import onnxruntime as ort
+        from onnx import helper, numpy_helper
     except ImportError as e:
         raise ImportError("Looks like torch module is not installed: ", e) from e
     return EmotiEffLibRecognizerOnnx(model_name)
