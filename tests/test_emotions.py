@@ -10,7 +10,7 @@ import pytest
 import torch
 from facenet_pytorch import MTCNN
 
-from hsei.facial_emotions import HSEmotionRecognizer, get_model_list
+from emotiefflib.facial_emotions import EmotiEffLibRecognizer, get_model_list
 
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
@@ -37,7 +37,7 @@ def test_one_image(model_name, engine):
         bounding_boxes = bounding_boxes[probs > 0.9]
         return bounding_boxes
 
-    fer = HSEmotionRecognizer(engine=engine, model_name=model_name, device=device)
+    fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
     frame_bgr = cv2.imread(input_file)
     frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 

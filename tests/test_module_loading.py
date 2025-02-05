@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from hsei.facial_emotions import HSEmotionRecognizer
+from emotiefflib.facial_emotions import EmotiEffLibRecognizer
 
 
 def test_unsupported_engine():
@@ -14,7 +14,7 @@ def test_unsupported_engine():
     Check exception on unsupported engine
     """
     with pytest.raises(ValueError, match="Unsupported engine specified"):
-        _ = HSEmotionRecognizer(engine="OpenVINO")
+        _ = EmotiEffLibRecognizer(engine="OpenVINO")
 
 
 @pytest.mark.skipif(
@@ -22,10 +22,10 @@ def test_unsupported_engine():
 )
 def test_torch_is_not_installed():
     """
-    Check exception when HSEmotion recognizer is called for torch without torch installation
+    Check exception when EmotiEffLib recognizer is called for torch without torch installation
     """
     with pytest.raises(ImportError, match="Looks like torch module is not installed: "):
-        _ = HSEmotionRecognizer(engine="torch")
+        _ = EmotiEffLibRecognizer(engine="torch")
 
 
 @pytest.mark.skipif(
@@ -33,7 +33,7 @@ def test_torch_is_not_installed():
 )
 def test_onnx_is_not_installed():
     """
-    Check exception when HSEmotion recognizer is called for ONNX without ONNX installation
+    Check exception when EmotiEffLib recognizer is called for ONNX without ONNX installation
     """
     with pytest.raises(ImportError, match="Looks like torch module is not installed: "):
-        _ = HSEmotionRecognizer(engine="onnx")
+        _ = EmotiEffLibRecognizer(engine="onnx")
