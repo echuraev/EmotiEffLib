@@ -11,7 +11,7 @@ import pytest
 import torch
 from facenet_pytorch import MTCNN
 
-from emotiefflib.facial_emotions import EmotiEffLibRecognizer, get_model_list
+from emotiefflib.facial_analysis import EmotiEffLibRecognizer, get_model_list
 
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 

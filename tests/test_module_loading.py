@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from emotiefflib.facial_emotions import EmotiEffLibRecognizer
+from emotiefflib.facial_analysis import EmotiEffLibRecognizer
 
 
 def test_unsupported_engine():
