@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import pathlib
 from abc import ABC, abstractmethod
+from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
@@ -27,32 +28,44 @@ from PIL import Image
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
-def get_model_path_torch(model_name):
+def get_model_path_torch(model_name: str) -> str:
     """
-    Returns local path to a torch model
+    Return the local file path of a Torch model based on the given model name.
+
+    Args:
+        model_name (str): The name of the model (without file extension).
+
+    Returns:
+        str: The full path to the model file.
     """
     model_file = model_name + ".pt"
     path_in_repo = os.path.join(FILE_DIR, "..", "models", "affectnet_emotions")
     return os.path.join(path_in_repo, model_file)
 
 
-def get_model_path_onnx(model_name):
+def get_model_path_onnx(model_name: str) -> str:
     """
-    Returns local path to an ONNX model
+    Return the local file path of an ONNX model based on the given model name.
+
+    Args:
+        model_name (str): The name of the model (without file extension).
+
+    Returns:
+        str: The full path to the model file.
     """
     model_file = model_name + ".onnx"
     path_in_repo = os.path.join(FILE_DIR, "..", "models", "affectnet_emotions", "onnx")
     return os.path.join(path_in_repo, model_file)
 
 
-def get_model_list():
+def get_model_list() -> List[str]:
     """
     Returns a list of available model names.
 
     These models are supported by HSEmoitonRecognizer.
 
     Returns:
-        list of str: A list of model names.
+        List[str]: A list of model names.
     """
     return [
         "enet_b0_8_best_vgaf",
@@ -63,12 +76,12 @@ def get_model_list():
     ]
 
 
-def get_supported_engines():
+def get_supported_engines() -> List[str]:
     """
     Returns a list of supported inference engines.
 
     Returns:
-        list of str: A list of inference engines.
+        List[str]: A list of inference engines.
     """
     return ["torch", "onnx"]
 
@@ -78,7 +91,7 @@ class EmotiEffLibRecognizerBase(ABC):
     Abstract class for emotion recognizer classes
     """
 
-    def __init__(self, model_name):
+    def __init__(self, model_name: str) -> None:
         self.is_mtl = "_mtl" in model_name
         if "_7" in model_name:
             self.idx_to_class = {
@@ -104,39 +117,67 @@ class EmotiEffLibRecognizerBase(ABC):
         self.classifier_weights = None
         self.classifier_bias = None
 
-    def _get_probab(self, features):
+    def _get_probab(self, features: np.ndarray) -> np.ndarray:
         """
-        Returns probab
+        Compute the final classification scores for the given feature representations.
+
+        Args:
+            features (np.ndarray): The extracted feature vectors.
+
+        Returns:
+            np.ndarray: The raw classification scores (logits) before applying any activation
+                        function.
         """
         x = np.dot(features, np.transpose(self.classifier_weights)) + self.classifier_bias
         return x
 
     @abstractmethod
-    def _preprocess(self, img):
+    def _preprocess(self, img: np.ndarray) -> np.ndarray:
         """
-        Preprocess input image
+        Prepare an image for input to the model.
+
+        Args:
+            img (np.ndarray): The input image for preprocessing.
+
+        Returns:
+            np.ndarray: Preprocessed image.
         """
         raise NotImplementedError("It should be implemented")
 
     @abstractmethod
-    def extract_features(self, face_img):
+    def extract_features(self, face_img: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
         """
-        Extract features from facial image
+        Extract visual features from a facial image or a list of facial images.
+
+        Args:
+            face_img (Union[np.ndarray, List[np.ndarray]]):
+                A single face image (as a NumPy array) or a list of face images.
+
+        Returns:
+            np.ndarray: The extracted feature vectors.
         """
         raise NotImplementedError("It should be implemented")
 
-    @abstractmethod
-    def extract_multi_features(self, face_img_list):
+    def predict_emotions(
+        self, face_img: Union[np.ndarray, List[np.ndarray]], logits: bool = True
+    ) -> Tuple[List[str], np.ndarray]:
         """
-        Extract multi features from a sequence of facial images
-        """
-        raise NotImplementedError("It should be implemented")
+        Predict the emotions presented on a given facial image or a list of facial images.
 
-    def predict_multi_emotions(self, face_img_list, logits=True):
+        Args:
+            face_img (Union[np.ndarray, List[np.ndarray]]):
+                A single face image (as a NumPy array) or a list of face images.
+            logits (bool, optional):
+                If True, returns raw model scores (logits). If False, applies softmax normalization
+                to obtain probability distributions. Defaults to True.
+
+        Returns:
+            Tuple[Union[str, List[str]], np.ndarray]:
+                - The predicted emotion label(s) as a list of strings (for single image only with
+                  one element).
+                - The corresponding model output scores (logits or probabilities), as a NumPy array.
         """
-        Predict emotions on a sequence of facial images
-        """
-        features = self.extract_multi_features(face_img_list)
+        features = self.extract_features(face_img)
         scores = self._get_probab(features)
         if self.is_mtl:
             preds = np.argmax(scores[:, :-2], axis=1)
@@ -157,33 +198,13 @@ class EmotiEffLibRecognizerBase(ABC):
 
         return [self.idx_to_class[pred] for pred in preds], scores
 
-    def predict_emotions(self, face_img, logits=True):
-        """
-        Predict emotions for facial image
-        """
-        features = self.extract_features(face_img)
-        scores = self._get_probab(features)[0]
-        if self.is_mtl:
-            x = scores[:-2]
-        else:
-            x = scores
-        pred = np.argmax(x)
-        if not logits:
-            e_x = np.exp(x - np.max(x)[np.newaxis])
-            e_x = e_x / e_x.sum()[None]
-            if self.is_mtl:
-                scores[:-2] = e_x
-            else:
-                scores = e_x
-        return self.idx_to_class[pred], scores
-
 
 class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
     """
-    EmotiEffLibRecognizer class
+    Torch implementation of EmotiEffLibRecognizer.
     """
 
-    def __init__(self, model_name="enet_b0_8_best_vgaf", device="cpu"):
+    def __init__(self, model_name: str = "enet_b0_8_best_vgaf", device: str = "cpu") -> None:
         super().__init__(model_name)
         self.device = device
 
@@ -205,9 +226,15 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
         model = model.to(device)
         self.model = model.eval()
 
-    def _preprocess(self, img):
+    def _preprocess(self, img: np.ndarray) -> np.ndarray:
         """
-        Preprocess input image
+        Prepare an image for input to the model.
+
+        Args:
+            img (np.ndarray): The input image for preprocessing.
+
+        Returns:
+            np.ndarray: Preprocessed image.
         """
         test_transforms = transforms.Compose(
             [
@@ -218,32 +245,36 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
         )
         return test_transforms(Image.fromarray(img))
 
-    def extract_features(self, face_img):
+    def extract_features(self, face_img: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
         """
-        Extract features from facial image
-        """
-        img_tensor = self._preprocess(face_img)
-        img_tensor.unsqueeze_(0)
-        features = self.model(img_tensor.to(self.device))
-        features = features.data.cpu().numpy()
-        return features
+        Extract visual features from a facial image or a list of facial images.
 
-    def extract_multi_features(self, face_img_list):
+        Args:
+            face_img (Union[np.ndarray, List[np.ndarray]]):
+                A single face image (as a NumPy array) or a list of face images.
+
+        Returns:
+            np.ndarray: The extracted feature vectors.
         """
-        Extract multi features from a sequence of facial images
-        """
-        imgs = [self._preprocess(face_img) for face_img in face_img_list]
-        features = self.model(torch.stack(imgs, dim=0).to(self.device))
+        if isinstance(face_img, np.ndarray):
+            img_tensor = self._preprocess(face_img)
+            img_tensor.unsqueeze_(0)
+        elif isinstance(face_img, list) and all(isinstance(i, np.ndarray) for i in face_img):
+            img_tensor = [self._preprocess(img) for img in face_img]
+            img_tensor = torch.stack(img_tensor, dim=0)
+        else:
+            raise TypeError("Expected np.ndarray or List[np.ndarray]")
+        features = self.model(img_tensor.to(self.device))
         features = features.data.cpu().numpy()
         return features
 
 
 class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
     """
-    EmotiEffLibRecognizer class
+    ONNX implementation of EmotiEffLibRecognizer.
     """
 
-    def __init__(self, model_name="enet_b0_8_best_vgaf"):
+    def __init__(self, model_name: str = "enet_b0_8_best_vgaf") -> None:
         super().__init__(model_name)
 
         if "mbf_" in model_name:
@@ -288,34 +319,46 @@ class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
         ort.set_default_logger_severity(3)
         self.ort_session = ort.InferenceSession(model_bytes, providers=["CPUExecutionProvider"])
 
-    def _preprocess(self, img):
+    def _preprocess(self, img: np.ndarray) -> np.ndarray:
         """
-        Preprocess input image
+        Prepare an image for input to the model.
+
+        Args:
+            img (np.ndarray): The input image for preprocessing.
+
+        Returns:
+            np.ndarray: Preprocessed image.
         """
         x = cv2.resize(img, (self.img_size, self.img_size)) / 255
         for i in range(3):
             x[..., i] = (x[..., i] - self.mean[i]) / self.std[i]
         return x.transpose(2, 0, 1).astype("float32")[np.newaxis, ...]
 
-    def extract_features(self, face_img):
+    def extract_features(self, face_img: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
         """
-        Extract features from facial image
-        """
-        img_tensor = self._preprocess(face_img)
-        features = self.ort_session.run(None, {"input": img_tensor})[0]
-        return features
+        Extract visual features from a facial image or a list of facial images.
 
-    def extract_multi_features(self, face_img_list):
+        Args:
+            face_img (Union[np.ndarray, List[np.ndarray]]):
+                A single face image (as a NumPy array) or a list of face images.
+
+        Returns:
+            np.ndarray: The extracted feature vectors.
         """
-        Extract multi features from a sequence of facial images
-        """
-        imgs = np.concatenate([self._preprocess(face_img) for face_img in face_img_list], axis=0)
-        features = self.ort_session.run(None, {"input": imgs})[0]
+        if isinstance(face_img, np.ndarray):
+            img_tensor = self._preprocess(face_img)
+        elif isinstance(face_img, list) and all(isinstance(i, np.ndarray) for i in face_img):
+            img_tensor = np.concatenate([self._preprocess(img) for img in face_img], axis=0)
+        else:
+            raise TypeError("Expected np.ndarray or List[np.ndarray]")
+        features = self.ort_session.run(None, {"input": img_tensor})[0]
         return features
 
 
 # pylint: disable=invalid-name
-def EmotiEffLibRecognizer(engine="torch", model_name="enet_b0_8_best_vgaf", device="cpu"):
+def EmotiEffLibRecognizer(
+    engine: str = "torch", model_name: str = "enet_b0_8_best_vgaf", device: str = "cpu"
+) -> Union[EmotiEffLibRecognizerOnnx, EmotiEffLibRecognizerTorch]:
     """
     Creates EmotiEffLibRecognizer instance.
 

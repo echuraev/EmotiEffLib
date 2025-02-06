@@ -77,7 +77,7 @@ def test_one_image_prediction(model_name, engine):
     emotions = []
     for face_img in facial_images:
         emotion, _ = fer.predict_emotions(face_img, logits=True)
-        emotions.append(emotion)
+        emotions.append(emotion[0])
     exp_emotions = ["Happiness", "Anger", "Fear"]
 
     assert emotions == exp_emotions
@@ -104,7 +104,7 @@ def test_one_image_multi_prediction(model_name, engine):
 
     fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
 
-    emotions, _ = fer.predict_multi_emotions(facial_images, logits=True)
+    emotions, _ = fer.predict_emotions(facial_images, logits=True)
     exp_emotions = ["Happiness", "Anger", "Fear"]
 
     assert emotions == exp_emotions
@@ -150,8 +150,8 @@ def test_one_image_multi_features(model_name):
     fer_onnx = EmotiEffLibRecognizer(engine="onnx", model_name=model_name, device=device)
     fer_torch = EmotiEffLibRecognizer(engine="torch", model_name=model_name, device=device)
 
-    features_onnx = np.array(fer_onnx.extract_multi_features(facial_images))
-    features_torch = np.array(fer_torch.extract_multi_features(facial_images))
+    features_onnx = fer_onnx.extract_features(facial_images)
+    features_torch = fer_torch.extract_features(facial_images)
     assert features_onnx.shape[0] == 3
     assert features_onnx.shape == features_torch.shape
 
@@ -189,7 +189,7 @@ def test_inference_affect_net(model_name, engine):
         frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
         emotion, _ = fer.predict_emotions(frame, logits=True)
-        emotions.append(emotion)
+        emotions.append(emotion[0])
 
     assert len(emotions) == len(input_labels)
     preds = np.array(emotions)
@@ -222,7 +222,7 @@ def test_on_video(model_name, engine):
         facial_images = recognize_faces(image_rgb, device)
         if len(facial_images) == 0:
             continue
-        _, scores = fer.predict_multi_emotions(facial_images, logits=True)
+        _, scores = fer.predict_emotions(facial_images, logits=True)
         if all_scores is not None:
             all_scores = np.concatenate((all_scores, scores))
         else:
