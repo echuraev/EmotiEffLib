@@ -23,6 +23,13 @@ jobs:
           pip install -r requirements.txt
           pip install -r tests/requirements.txt
 
+      - name: Download and unpack test data
+        run: |
+          cd tests/
+          ./download_test_data.sh
+          tar -xzf data.tar.gz
+          cd ..
+
       - name: Set PYTHONPATH environment variable
         run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 

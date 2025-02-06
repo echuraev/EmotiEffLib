@@ -16,7 +16,7 @@ from emotiefflib.facial_emotions import EmotiEffLibRecognizer, get_model_list
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
-def recognize_faces(image_path, device):
+def recognize_faces(frame, device):
     """
     Detects faces in the given image and returns the facial images cropped from the original.
 
@@ -24,7 +24,7 @@ def recognize_faces(image_path, device):
     face detection model, and returns a list of cropped face images.
 
     Args:
-        image_path (str): The path to the image file in which faces need to be detected.
+        frame (numpy.ndarray): The image frame in which faces need to be detected.
         device (str): The device to run the MTCNN face detection model on, e.g., 'cpu' or 'cuda'.
 
     Returns:
@@ -34,13 +34,13 @@ def recognize_faces(image_path, device):
         faces = recognize_faces('image.jpg', 'cuda')
         # faces contains the cropped face images detected in 'image.jpg'.
     """
-    frame_bgr = cv2.imread(image_path)
-    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
     def detect_face(frame):
         # pylint: disable=unbalanced-tuple-unpacking
         mtcnn = MTCNN(keep_all=False, post_process=False, min_face_size=40, device=device)
         bounding_boxes, probs = mtcnn.detect(frame, landmarks=False)
+        if probs[0] is None:
+            return []
         bounding_boxes = bounding_boxes[probs > 0.9]
         return bounding_boxes
 
@@ -67,7 +67,10 @@ def test_one_image_prediction(model_name, engine):
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
-    facial_images = recognize_faces(input_file, device)
+    frame_bgr = cv2.imread(input_file)
+    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+    facial_images = recognize_faces(frame, device)
 
     fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
 
@@ -94,7 +97,10 @@ def test_one_image_multi_prediction(model_name, engine):
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
-    facial_images = recognize_faces(input_file, device)
+    frame_bgr = cv2.imread(input_file)
+    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+    facial_images = recognize_faces(frame, device)
 
     fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
 
@@ -113,7 +119,10 @@ def test_one_image_features(model_name):
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
-    facial_images = recognize_faces(input_file, device)
+    frame_bgr = cv2.imread(input_file)
+    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+    facial_images = recognize_faces(frame, device)
 
     fer_onnx = EmotiEffLibRecognizer(engine="onnx", model_name=model_name, device=device)
     fer_torch = EmotiEffLibRecognizer(engine="torch", model_name=model_name, device=device)
@@ -133,7 +142,10 @@ def test_one_image_multi_features(model_name):
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
-    facial_images = recognize_faces(input_file, device)
+    frame_bgr = cv2.imread(input_file)
+    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+    facial_images = recognize_faces(frame, device)
 
     fer_onnx = EmotiEffLibRecognizer(engine="onnx", model_name=model_name, device=device)
     fer_torch = EmotiEffLibRecognizer(engine="torch", model_name=model_name, device=device)
@@ -142,3 +154,83 @@ def test_one_image_multi_features(model_name):
     features_torch = np.array(fer_torch.extract_multi_features(facial_images))
     assert features_onnx.shape[0] == 3
     assert features_onnx.shape == features_torch.shape
+
+
+@pytest.mark.parametrize("model_name", get_model_list())
+@pytest.mark.parametrize("engine", ["torch", "onnx"])
+def test_inference_affect_net(model_name, engine):
+    """
+    Run accuracy testing on AffectNet dataset
+    """
+    files_limit = 100
+    use_cuda = torch.cuda.is_available()
+    device = "cuda" if use_cuda else "cpu"
+    fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
+    inputs_dir = os.path.join(FILE_DIR, "data", "AffectNet_val")
+    input_files = []
+    input_labels = []
+
+    for label in os.listdir(inputs_dir):
+        path = os.path.join(inputs_dir, label)
+        if label.startswith(".") or not os.path.isdir(path):
+            continue
+        for i, img in enumerate(os.listdir(path)):
+            if i >= files_limit:
+                break
+            if img.startswith("."):
+                continue
+            img_path = os.path.join(path, img)
+            input_files.append(img_path)
+            input_labels.append(label)
+
+    emotions = []
+    for img in input_files:
+        frame_bgr = cv2.imread(img)
+        frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+        emotion, _ = fer.predict_emotions(frame, logits=True)
+        emotions.append(emotion)
+
+    assert len(emotions) == len(input_labels)
+    preds = np.array(emotions)
+    labels = np.array(input_labels)
+    acc = (labels == preds).mean()
+    assert acc > 0.55
+
+
+@pytest.mark.parametrize("model_name", get_model_list())
+@pytest.mark.parametrize("engine", ["torch", "onnx"])
+def test_on_video(model_name, engine):
+    """
+    Simple test that checks emotions on video
+    """
+    use_cuda = torch.cuda.is_available()
+    device = "cuda" if use_cuda else "cpu"
+
+    input_file = os.path.join(FILE_DIR, "data", "video_samples", "emotions", "Angry", "Angry.mp4")
+
+    fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
+
+    cap = cv2.VideoCapture(input_file)
+    all_scores = None
+    while cap.isOpened():
+        success, image = cap.read()
+        if not success:
+            break
+
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        facial_images = recognize_faces(image_rgb, device)
+        if len(facial_images) == 0:
+            continue
+        _, scores = fer.predict_multi_emotions(facial_images, logits=True)
+        if all_scores is not None:
+            all_scores = np.concatenate((all_scores, scores))
+        else:
+            all_scores = scores
+
+    cap.release()
+
+    score = np.mean(all_scores, axis=0)
+    emotion = np.argmax(score)
+
+    assert fer.idx_to_class[emotion] == "Anger"
