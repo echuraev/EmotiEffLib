@@ -1,16 +1,26 @@
-# HSEmotion (High-Speed face Emotion recognition) library
+# EmotiEffLib (Emotion Efficient Library)
 [![Downloads](https://static.pepy.tech/personalized-badge/hsemotion?period=total&units=international_system&left_color=grey&right_color=blue&left_text=pip%20installs)](https://pepy.tech/project/hsemotion)
 [![pypi package](https://img.shields.io/badge/version-v0.2.0-blue)](https://pypi.org/project/hsemotion)
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/classifying-emotions-and-engagement-in-online/facial-expression-recognition-on-affectnet)](https://paperswithcode.com/sota/facial-expression-recognition-on-affectnet?p=classifying-emotions-and-engagement-in-online)
 
-This repository contains code that was developed by A. Savchenko during his research at the HSE University and Sber AI Lab.
+This repository contains code that was developed by A. Savchenko and E. Churaev during their research at the HSE University and Sber AI Lab.
+
+## License
+
+The code of EmotiEffLib Python Library is released under the Apache-2.0 License. There is no limitation for both academic and commercial usage.
+
+## Installing
+
+```
+    python setup.py install
+```
+
+It is also possible to install it via pip:
+```
+    pip install emotiefflib
+```
 
 ## Usage
-Special python packages [hsemotion](https://github.com/HSE-asavchenko/hsemotion) and [hsemotion-onnx](https://github.com/HSE-asavchenko/hsemotion-onnx) were prepared to simplify the usage of our models for face expression recognition and extraction of visual emotional embeddings. They can be installed via pip:
-```
-    pip install hsemotion
-    pip install hsemotion-onnx
-```
 
 In order to run our code on the datasets, please prepare them firstly using our TensorFlow notebooks: [train_emotions.ipynb](src/affectnet/train_emotions.ipynb), [AFEW_train.ipynb](src/AFEW_train.ipynb) and [VGAF_train.ipynb](src/VGAF_train.ipynb).
 
