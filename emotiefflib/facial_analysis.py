@@ -4,8 +4,6 @@ Facial emotions recognition implementation
 
 from __future__ import absolute_import, division, print_function
 
-import os
-import pathlib
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Union
 
@@ -26,38 +24,7 @@ except ImportError:
 from PIL import Image
 
 from .engagement_classification_model import get_engagement_model
-
-FILE_DIR = pathlib.Path(__file__).parent.resolve()
-
-
-def get_model_path_torch(model_name: str) -> str:
-    """
-    Return the local file path of a Torch model based on the given model name.
-
-    Args:
-        model_name (str): The name of the model (without file extension).
-
-    Returns:
-        str: The full path to the model file.
-    """
-    model_file = model_name + ".pt"
-    path_in_repo = os.path.join(FILE_DIR, "..", "models", "affectnet_emotions")
-    return os.path.join(path_in_repo, model_file)
-
-
-def get_model_path_onnx(model_name: str) -> str:
-    """
-    Return the local file path of an ONNX model based on the given model name.
-
-    Args:
-        model_name (str): The name of the model (without file extension).
-
-    Returns:
-        str: The full path to the model file.
-    """
-    model_file = model_name + ".onnx"
-    path_in_repo = os.path.join(FILE_DIR, "..", "models", "affectnet_emotions", "onnx")
-    return os.path.join(path_in_repo, model_file)
+from .utils import get_model_path_onnx, get_model_path_torch
 
 
 def get_model_list() -> List[str]:
