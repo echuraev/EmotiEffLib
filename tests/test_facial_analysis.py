@@ -66,7 +66,7 @@ def test_one_image_prediction(model_name, engine):
         exp_emotions = ["Happiness", "Anger", "Happiness"]
     else:
         exp_emotions = ["Happiness", "Anger", "Fear"]
-    input_file = os.path.join(FILE_DIR, "..", "test_images", "20180720_174416.jpg")
+    input_file = os.path.join(FILE_DIR, "..", "tests", "test_images", "20180720_174416.jpg")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
@@ -97,7 +97,7 @@ def test_one_image_multi_prediction(model_name, engine):
         exp_emotions = ["Happiness", "Anger", "Happiness"]
     else:
         exp_emotions = ["Happiness", "Anger", "Fear"]
-    input_file = os.path.join(FILE_DIR, "..", "test_images", "20180720_174416.jpg")
+    input_file = os.path.join(FILE_DIR, "..", "tests", "test_images", "20180720_174416.jpg")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
@@ -118,7 +118,7 @@ def test_one_image_features(model_name):
     """
     Compare feature vectors for ONNX and Torch implementations
     """
-    input_file = os.path.join(FILE_DIR, "..", "test_images", "20180720_174416.jpg")
+    input_file = os.path.join(FILE_DIR, "..", "tests", "test_images", "20180720_174416.jpg")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
@@ -141,7 +141,7 @@ def test_one_image_multi_features(model_name):
     """
     Compare feature vectors for ONNX and Torch implementations with extract_multi_features API
     """
-    input_file = os.path.join(FILE_DIR, "..", "test_images", "20180720_174416.jpg")
+    input_file = os.path.join(FILE_DIR, "..", "tests", "test_images", "20180720_174416.jpg")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
 
