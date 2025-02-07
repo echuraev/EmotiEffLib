@@ -2,9 +2,6 @@
 Engagement classification model implementation
 """
 
-import os
-import pathlib
-
 # pylint: disable=no-name-in-module,import-error
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import (
@@ -19,7 +16,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
-FILE_DIR = pathlib.Path(__file__).parent.resolve()
+from .utils import get_engagement_classification_weights
 
 
 def _single_attention_model(n_classes, weights, feature_vector_dim, samples=None):
@@ -78,5 +75,5 @@ def get_engagement_model(feature_vector_dim, number_of_frames):
     Returns:
         Model: A Keras model for engagement classification.
     """
-    weights_path = os.path.join(FILE_DIR, "weights/engagement_single_attention.h5")
+    weights_path = get_engagement_classification_weights()
     return _single_attention_model(2, weights_path, feature_vector_dim, number_of_frames)
