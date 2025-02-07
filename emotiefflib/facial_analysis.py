@@ -25,6 +25,8 @@ except ImportError:
     pass
 from PIL import Image
 
+from .engagement_classification_model import get_engagement_model
+
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
@@ -93,8 +95,12 @@ class EmotiEffLibRecognizerBase(ABC):
 
     def __init__(self, model_name: str) -> None:
         self.is_mtl = "_mtl" in model_name
+        self.idx_to_engagement_class = {
+            0: "Distracted",
+            1: "Engaged",
+        }
         if "_7" in model_name:
-            self.idx_to_class = {
+            self.idx_to_emotion_class = {
                 0: "Anger",
                 1: "Disgust",
                 2: "Fear",
@@ -104,7 +110,7 @@ class EmotiEffLibRecognizerBase(ABC):
                 6: "Surprise",
             }
         else:
-            self.idx_to_class = {
+            self.idx_to_emotion_class = {
                 0: "Anger",
                 1: "Contempt",
                 2: "Disgust",
@@ -158,6 +164,105 @@ class EmotiEffLibRecognizerBase(ABC):
         """
         raise NotImplementedError("It should be implemented")
 
+    def classify_emotions(
+        self, features: np.ndarray, logits: bool = True
+    ) -> Tuple[List[str], np.ndarray]:
+        """
+        Classify emotions based on extracted feature representations.
+
+        Args:
+            features (np.ndarray): The extracted feature vectors.
+            logits (bool, optional):
+                If True, returns raw model scores (logits). If False, applies softmax normalization
+                to obtain probability distributions. Defaults to True.
+
+        Returns:
+            Tuple[List[str], np.ndarray]:
+                - A list of predicted emotion labels.
+                - The corresponding model output scores (logits or probabilities), as a NumPy array.
+        """
+        scores = self._get_probab(features)
+        if self.is_mtl:
+            preds = np.argmax(scores[:, :-2], axis=1)
+        else:
+            preds = np.argmax(scores, axis=1)
+        if self.is_mtl:
+            x = scores[:, :-2]
+        else:
+            x = scores
+
+        if not logits:
+            e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
+            e_x = e_x / e_x.sum(axis=1)[:, None]
+            if self.is_mtl:
+                scores[:, :-2] = e_x
+            else:
+                scores = e_x
+
+        return [self.idx_to_emotion_class[pred] for pred in preds], scores
+
+    def classify_engagement(self, features: np.ndarray, sliding_window_width: int = 128):
+        """
+        Classify engagement levels based on extracted feature representations using a sliding
+        window approach.
+
+        Args:
+            features (np.ndarray): The extracted feature vectors from a video sequence.
+            sliding_window_width (int, optional):
+                The width of the sliding window used for engagement classification. Defaults to 128.
+
+        Returns:
+            Tuple[List[str], np.ndarray]:
+                - A list of predicted engagement levels.
+                - The corresponding model output scores.
+
+        Raises:
+            ValueError: If the number of frames in the video is smaller than the sliding window
+                        width.
+        """
+        stat_func = np.std
+        if features.shape[0] < sliding_window_width:
+            raise ValueError(
+                f"Not enough frames to predict engagement. "
+                f"Sliding window width: {sliding_window_width}, "
+                f"but number of frames in video: {features.shape[0]}"
+            )
+        max_iters = features.shape[0] - sliding_window_width
+        features_slices = []
+        for i in range(max_iters):
+            start = i
+            end = sliding_window_width + i
+            x = features[start:end]
+            mean_x = np.repeat(stat_func(x, axis=0).reshape((1, -1)), len(x), axis=0)
+            features_slices.append(np.concatenate((mean_x, x), axis=1))
+        features_slices = np.array(features_slices)
+        model = get_engagement_model(features_slices.shape[-1], sliding_window_width)
+        scores = model.predict(features_slices, verbose=0)
+        preds = np.argmax(scores, axis=1)
+        return [self.idx_to_engagement_class[pred] for pred in preds], scores
+
+    def predict_engagement(self, face_imgs: List[np.ndarray], sliding_window_width: int = 128):
+        """
+        Predict the engagement presented on a sequence of facial images.
+
+        Args:
+            face_imgs (List[np.ndarray]):
+                A sequence of face images.
+            sliding_window_width (int, optional):
+                The width of the sliding window used for engagement classification. Defaults to 128.
+
+        Returns:
+            Tuple[List[str], np.ndarray]:
+                - A list of predicted engagement levels.
+                - The corresponding model output scores.
+
+        Raises:
+            ValueError: If the number of frames in the video is smaller than the sliding window
+                        width.
+        """
+        features = self.extract_features(face_imgs)
+        return self.classify_engagement(features, sliding_window_width)
+
     def predict_emotions(
         self, face_img: Union[np.ndarray, List[np.ndarray]], logits: bool = True
     ) -> Tuple[List[str], np.ndarray]:
@@ -178,25 +283,7 @@ class EmotiEffLibRecognizerBase(ABC):
                 - The corresponding model output scores (logits or probabilities), as a NumPy array.
         """
         features = self.extract_features(face_img)
-        scores = self._get_probab(features)
-        if self.is_mtl:
-            preds = np.argmax(scores[:, :-2], axis=1)
-        else:
-            preds = np.argmax(scores, axis=1)
-        if self.is_mtl:
-            x = scores[:, :-2]
-        else:
-            x = scores
-
-        if not logits:
-            e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
-            e_x = e_x / e_x.sum(axis=1)[:, None]
-            if self.is_mtl:
-                scores[:, :-2] = e_x
-            else:
-                scores = e_x
-
-        return [self.idx_to_class[pred] for pred in preds], scores
+        return self.classify_emotions(features, logits)
 
 
 class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):

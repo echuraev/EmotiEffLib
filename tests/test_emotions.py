@@ -4,6 +4,7 @@ Pytests to check facial expression recognition functionality
 
 import os
 import pathlib
+from typing import List
 
 import cv2
 import numpy as np
@@ -16,7 +17,7 @@ from emotiefflib.facial_analysis import EmotiEffLibRecognizer, get_model_list
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
-def recognize_faces(frame, device):
+def recognize_faces(frame: np.ndarray, device: str) -> List[np.array]:
     """
     Detects faces in the given image and returns the facial images cropped from the original.
 
@@ -35,7 +36,7 @@ def recognize_faces(frame, device):
         # faces contains the cropped face images detected in 'image.jpg'.
     """
 
-    def detect_face(frame):
+    def detect_face(frame: np.ndarray):
         # pylint: disable=unbalanced-tuple-unpacking
         mtcnn = MTCNN(keep_all=False, post_process=False, min_face_size=40, device=device)
         bounding_boxes, probs = mtcnn.detect(frame, landmarks=False)
@@ -233,4 +234,43 @@ def test_on_video(model_name, engine):
     score = np.mean(all_scores, axis=0)
     emotion = np.argmax(score)
 
-    assert fer.idx_to_class[emotion] == "Anger"
+    assert fer.idx_to_emotion_class[emotion] == "Anger"
+
+
+@pytest.mark.parametrize("model_name", get_model_list())
+@pytest.mark.parametrize("engine", ["torch", "onnx"])
+def test_engagement_on_video(model_name, engine):
+    """
+    Simple test that checks engagement on video
+    """
+    if model_name in ("enet_b2_8", "enet_b2_7"):
+        pytest.xfail("These models are not supported")
+    use_cuda = torch.cuda.is_available()
+    device = "cuda" if use_cuda else "cpu"
+
+    input_file = os.path.join(
+        FILE_DIR, "data", "video_samples", "engagement", "engaged", "1_video1.mp4"
+    )
+
+    fer = EmotiEffLibRecognizer(engine=engine, model_name=model_name, device=device)
+
+    cap = cv2.VideoCapture(input_file)
+    frames = []
+    while cap.isOpened():
+        success, image = cap.read()
+        if not success:
+            break
+
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        facial_images = recognize_faces(image_rgb, device)
+        if len(facial_images) == 0:
+            continue
+        frames += facial_images
+
+    cap.release()
+    _, scores = fer.predict_engagement(frames)
+
+    score = np.mean(scores, axis=0)
+    engagement = np.argmax(score)
+
+    assert fer.idx_to_engagement_class[engagement] == "Engaged"
