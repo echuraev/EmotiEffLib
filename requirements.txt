@@ -8,6 +8,7 @@ opencv-python
 pillow
 pre-commit
 pylint
+tensorflow
 timm==0.9.*
 torch
 torchvision
