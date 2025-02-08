@@ -1,34 +1,8 @@
 # More info you can find http://clang.llvm.org/docs/ClangFormat.html
-BasedOnStyle:                                   Google
-Language:                                       Cpp
+BasedOnStyle:                                   LLVM
+ColumnLimit:                                    100
+IndentWidth:                                    4
 AccessModifierOffset:                           -4
-AllowAllParametersOfDeclarationOnNextLine:      false
-AllowShortFunctionsOnASingleLine:               Inline
-AllowShortIfStatementsOnASingleLine:            false
-AllowShortLoopsOnASingleLine:                   false
-BinPackParameters:                              false
-BreakBeforeBraces:                              Custom
-BraceWrapping:
-  AfterClass:                                   true
-  AfterEnum:                                    true
-  AfterFunction:                                true
-  AfterNamespace:                               true
-  AfterCaseLabel:                               true
-IndentCaseLabels:                               true
-BreakInheritanceList:                           BeforeComma
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
-ConstructorInitializerIndentWidth:              4
-ContinuationIndentWidth:                        8
 DerivePointerAlignment:                         false
 PointerAlignment:                               Left
-BreakConstructorInitializers:                   BeforeComma
-PackConstructorInitializers:                    Never
-ColumnLimit:                                    100
-FixNamespaceComments:                           true
-IncludeBlocks:                                  Preserve
-IndentWidth:                                    4
-NamespaceIndentation:                           None
-SpaceAfterTemplateKeyword:                      false
-SpaceBeforeCpp11BracedList:                     true
-SpacesInContainerLiterals:                      false
-Standard:                                       Cpp14
+Standard:                                       c++20

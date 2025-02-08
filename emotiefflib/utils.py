@@ -1,6 +1,7 @@
 """
 Module with internally used utils
 """
+
 import os
 import urllib.request
 

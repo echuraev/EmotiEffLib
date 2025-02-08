@@ -3,6 +3,7 @@
 
 #include <string>
 
+namespace EmotiEffLib {
 class EmotiEffLibRecognizerTorch {
 public:
     EmotiEffLibRecognizerTorch(const std::string& pathToModel, const std::string& device);
@@ -10,5 +11,6 @@ public:
 private:
     int imgSize_;
 };
+} // namespace EmotiEffLib
 
 #endif
