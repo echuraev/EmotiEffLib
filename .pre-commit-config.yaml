@@ -21,3 +21,8 @@ repos:
     rev: v5.10.1
     hooks:
       - id: isort
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.7
+    hooks:
+    -   id: clang-format
+        files: \.(cpp|h|c|cc|cxx|m|mm)$

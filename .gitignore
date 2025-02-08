@@ -5,3 +5,4 @@ tests/data.tar.gz
 build
 dist
 *egg-info
+.cache

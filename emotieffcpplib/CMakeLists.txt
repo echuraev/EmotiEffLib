@@ -18,12 +18,8 @@ if(NOT WITH_TORCH AND NOT WITH_ONNX)
     message(FATAL_ERROR "At least one inference engine should be specified: -DWITH_TORCH or -DWITH_ONNX")
 endif()
 
-set(MTCNN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/opencv-mtcnn")
-add_subdirectory("${MTCNN_PATH}")
-
 include_directories(
     "${PROJECT_SOURCE_DIR}/include"
-    "${PROJECT_SOURCE_DIR}/3rdparty/opencv-mtcnn/lib/include"
 )
 
 file(GLOB src_files
@@ -35,8 +31,7 @@ add_library(${PROJECT_NAME} STATIC
 )
 
 target_link_libraries(${PROJECT_NAME}
-    ${OpenCV_LIBS}
-    mtcnn
+    ${OpenCV_LIBS} # ??? Is it really necessary
 )
 
 if(${BUILD_TESTS})
