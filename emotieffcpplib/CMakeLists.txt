@@ -18,6 +18,11 @@ if(NOT WITH_TORCH AND NOT WITH_ONNX)
     message(FATAL_ERROR "At least one inference engine should be specified: -DWITH_TORCH or -DWITH_ONNX")
 endif()
 
+if (WITH_TORCH)
+    list(APPEND CMAKE_PREFIX_PATH "${WITH_TORCH}")
+    find_package(Torch REQUIRED)
+endif()
+
 include_directories(
     "${PROJECT_SOURCE_DIR}/include"
 )
@@ -32,6 +37,7 @@ add_library(${PROJECT_NAME} STATIC
 
 target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBS} # ??? Is it really necessary
+    ${TORCH_LIBRARIES}
 )
 
 if(${BUILD_TESTS})
