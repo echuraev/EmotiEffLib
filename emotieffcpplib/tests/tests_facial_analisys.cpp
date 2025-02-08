@@ -13,6 +13,6 @@ TEST(EmotionRecognition, Basic) {
     auto facialImages = recognizeFaces(frame);
 
     fs::path modelPath(getEmotiEffLibRootDir());
-    modelPath = modelPath / "models" / "affectnet_emotions" / "enet_b0_8_best_vgaf.pt";
-    EmotiEffLib::EmotiEffLibRecognizerTorch(modelPath, "sdfsdf");
+    modelPath = modelPath / "models" / "traced_affectnet_emotions" / "enet_b0_8_best_vgaf.pt";
+    EmotiEffLib::EmotiEffLibRecognizerTorch fer(modelPath);
 }
