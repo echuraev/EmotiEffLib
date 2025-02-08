@@ -6,7 +6,7 @@
 namespace EmotiEffLib {
 class EmotiEffLibRecognizerTorch {
 public:
-    EmotiEffLibRecognizerTorch(const std::string& pathToModel, const std::string& device);
+    EmotiEffLibRecognizerTorch(const std::string& pathToModel);
 
 private:
     int imgSize_;
