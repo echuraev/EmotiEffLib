@@ -1,0 +1,3 @@
+[submodule "emotieffcpplib/3rdparty/opencv-mtcnn"]
+	path = emotieffcpplib/3rdparty/opencv-mtcnn
+	url = git@github.com:egcode/opencv-mtcnn.git
