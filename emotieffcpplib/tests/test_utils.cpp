@@ -28,12 +28,16 @@ cv::Mat downscaleImageToWidth(const cv::Mat& inputImage, int targetWidth) {
 }
 } // namespace
 
-std::vector<cv::Mat> recognizeFaces(const cv::Mat& frame, int downscaleWidth) {
+std::string getEmotiEffLibRootDir() {
     const char* emotiEffLibRoot = std::getenv("EMOTIEFFLIB_ROOT");
     if (emotiEffLibRoot == nullptr)
         throw std::runtime_error(
             "EMOTIEFFLIB_ROOT environment variable MUST be specified for running tests");
-    fs::path dirWithModels(emotiEffLibRoot);
+    return std::string(emotiEffLibRoot);
+}
+
+std::vector<cv::Mat> recognizeFaces(const cv::Mat& frame, int downscaleWidth) {
+    fs::path dirWithModels(getEmotiEffLibRootDir());
     dirWithModels =
         dirWithModels / "emotieffcpplib" / "3rdparty" / "opencv-mtcnn" / "data" / "models";
     const ProposalNetwork::Config pConfig = {.protoText = dirWithModels / "det1.prototxt",
@@ -66,12 +70,7 @@ std::vector<cv::Mat> recognizeFaces(const cv::Mat& frame, int downscaleWidth) {
 }
 
 std::string getPathToPythonTestDir() {
-    const char* emotiEffLibRoot = std::getenv("EMOTIEFFLIB_ROOT");
-    if (emotiEffLibRoot == nullptr)
-        throw std::runtime_error(
-            "EMOTIEFFLIB_ROOT environment variable MUST be specified for running tests");
-
-    fs::path testDir(emotiEffLibRoot);
+    fs::path testDir(getEmotiEffLibRootDir());
     testDir /= "tests";
 
     return testDir;

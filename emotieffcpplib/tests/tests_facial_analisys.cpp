@@ -11,9 +11,8 @@ TEST(EmotionRecognition, Basic) {
     imagePath = imagePath / "test_images" / "20180720_174416.jpg";
     cv::Mat frame = cv::imread(imagePath);
     auto facialImages = recognizeFaces(frame);
-    EmotiEffLib::EmotiEffLibRecognizerTorch("asdfsf", "sdfsdf");
-    // Expect two strings not to be equal.
-    EXPECT_STRNE("hello", "world");
-    // Expect equality.
-    EXPECT_EQ(7 * 6, 42);
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    modelPath = modelPath / "models" / "affectnet_emotions" / "enet_b0_8_best_vgaf.pt";
+    EmotiEffLib::EmotiEffLibRecognizerTorch(modelPath, "sdfsdf");
 }
