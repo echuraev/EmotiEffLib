@@ -12,19 +12,29 @@ find_package(OpenCV REQUIRED)
 
 option(BUILD_TESTS "Build EmotiEffCppLib with tests" OFF)
 option(WITH_TORCH "Path to the direcotry with Libtorch" OFF)
-option(WITH_ONNX "Build EmotiEffCppLib with tests" OFF)
+option(WITH_ONNX "Path to the direcotry with ONNXRuntime" OFF)
 
 if(NOT WITH_TORCH AND NOT WITH_ONNX)
     message(FATAL_ERROR "At least one inference engine should be specified: -DWITH_TORCH or -DWITH_ONNX")
 endif()
 
+set(LINK_LIBRARIES ${OpenCV_LIBS})
+set(INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include")
 if (WITH_TORCH)
     list(APPEND CMAKE_PREFIX_PATH "${WITH_TORCH}")
     find_package(Torch REQUIRED)
+    list(APPEND LINK_LIBRARIES ${TORCH_LIBRARIES})
+endif()
+if (WITH_ONNX)
+    list(APPEND CMAKE_PREFIX_PATH "${WITH_ONNX}")
+    find_package(onnxruntime REQUIRED)
+    list(APPEND INCLUDE_DIRS "${WITH_ONNX}/include")
+    find_library(ONNX_RUNTIME_LIB onnxruntime HINTS "${WITH_ONNX}/lib")
+    list(APPEND LINK_LIBRARIES ${ONNX_RUNTIME_LIB})
 endif()
 
 include_directories(
-    "${PROJECT_SOURCE_DIR}/include"
+    ${INCLUDE_DIRS}
 )
 
 file(GLOB src_files
@@ -36,8 +46,7 @@ add_library(${PROJECT_NAME} STATIC
 )
 
 target_link_libraries(${PROJECT_NAME}
-    ${OpenCV_LIBS} # ??? Is it really necessary
-    ${TORCH_LIBRARIES}
+    ${LINK_LIBRARIES}
 )
 
 if(${BUILD_TESTS})
