@@ -1,13 +1,11 @@
+#include "emotiefflib/backends/onnx/facial_analysis.h"
 #include "emotiefflib/facial_analysis.h"
-
-#include <filesystem>
 
 #include <onnxruntime_cxx_api.h>
 
-namespace fs = std::filesystem;
-
 namespace EmotiEffLib {
-EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& pathToModel) {
+EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPath)
+    : EmotiEffLibRecognizer(modelPath) {
     auto providers = Ort::GetAvailableProviders();
     for (auto provider : providers) {
         std::cout << provider << std::endl;

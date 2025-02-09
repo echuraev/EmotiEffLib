@@ -18,27 +18,39 @@ if(NOT WITH_TORCH AND NOT WITH_ONNX)
     message(FATAL_ERROR "At least one inference engine should be specified: -DWITH_TORCH or -DWITH_ONNX")
 endif()
 
+file(GLOB src_files
+    "src/*.cpp"
+)
+
 set(LINK_LIBRARIES ${OpenCV_LIBS})
 set(INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include")
+
 if (WITH_TORCH)
     list(APPEND CMAKE_PREFIX_PATH "${WITH_TORCH}")
     find_package(Torch REQUIRED)
     list(APPEND LINK_LIBRARIES ${TORCH_LIBRARIES})
+    file(GLOB torch_src_files
+        "src/backends/torch/*.cpp"
+    )
+    list(APPEND src_files ${torch_src_files})
+    add_definitions(-DWITH_TORCH)
 endif()
+
 if (WITH_ONNX)
     list(APPEND CMAKE_PREFIX_PATH "${WITH_ONNX}")
     find_package(onnxruntime REQUIRED)
     list(APPEND INCLUDE_DIRS "${WITH_ONNX}/include")
     find_library(ONNX_RUNTIME_LIB onnxruntime HINTS "${WITH_ONNX}/lib")
     list(APPEND LINK_LIBRARIES ${ONNX_RUNTIME_LIB})
+    file(GLOB onnx_src_files
+        "src/backends/onnx/*.cpp"
+    )
+    list(APPEND src_files ${onnx_src_files})
+    add_definitions(-DWITH_ONNX)
 endif()
 
 include_directories(
     ${INCLUDE_DIRS}
-)
-
-file(GLOB src_files
-    "src/*.cpp"
 )
 
 add_library(${PROJECT_NAME} STATIC
