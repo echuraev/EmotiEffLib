@@ -1,21 +1,16 @@
 #include "emotiefflib/facial_analysis.h"
+#include "emotiefflib/backends/onnx/facial_analysis.h"
+#include "emotiefflib/backends/torch/facial_analysis.h"
 
 #include <filesystem>
-
-// TODO: include headers under ifdef torch
-#include <torch/script.h>
-#include <torch/torch.h>
 
 namespace fs = std::filesystem;
 
 namespace EmotiEffLib {
-EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& pathToModel) {
-    torch::jit::script::Module model = torch::jit::load(pathToModel);
-    std::string model_name = fs::path(pathToModel).filename().string();
-    isMtl_ = model_name.find("_mtl") != std::string::npos;
-    bool isB0 = model_name.find("_b0_") != std::string::npos;
-    bool is7 = model_name.find("_7") != std::string::npos;
-    imgSize_ = isB0 ? 224 : 260;
+EmotiEffLibRecognizer::EmotiEffLibRecognizer(const std::string& modelPath) {
+    modelName_ = fs::path(modelPath).filename().string();
+    isMtl_ = modelName_.find("_mtl") != std::string::npos;
+    bool is7 = modelName_.find("_7") != std::string::npos;
     if (is7) {
         idxToEmotionClass_.resize(7);
         idxToEmotionClass_[0] = "Anger";
@@ -36,8 +31,29 @@ EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& pathTo
         idxToEmotionClass_[6] = "Sadness";
         idxToEmotionClass_[7] = "Surprise";
     }
-    auto x = torch::randn({1, 3, 224, 224});
-    auto output = model.forward({x}).toTensor();
-    std::cout << "Output shape: " << output.sizes() << std::endl;
+}
+
+std::vector<std::string> getAvailableBackends() {
+    return {
+#ifdef WITH_TORCH
+        "torch",
+#endif
+#ifdef WITH_ONNX
+        "onnx",
+#endif
+    };
+}
+
+std::unique_ptr<EmotiEffLibRecognizer> createEmotiEffLibRecognizer(const std::string& engine,
+                                                                   const std::string& modelPath) {
+    auto backends = getAvailableBackends();
+    auto it = std::find(backends.begin(), backends.end(), engine);
+    if (it == backends.end()) {
+        throw std::runtime_error("This backend (" + engine +
+                                 ") is not supported. Please check your EmotiEffLib build.");
+    }
+    if (engine == "torch")
+        return std::make_unique<EmotiEffLibRecognizerTorch>(modelPath);
+    return std::make_unique<EmotiEffLibRecognizerOnnx>(modelPath);
 }
 } // namespace EmotiEffLib
