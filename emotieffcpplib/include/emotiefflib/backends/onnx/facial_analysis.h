@@ -7,6 +7,8 @@ namespace EmotiEffLib {
 class EmotiEffLibRecognizerOnnx : public EmotiEffLibRecognizer {
 public:
     EmotiEffLibRecognizerOnnx(const std::string& modelPath);
+    EmotiEffLibRecognizerOnnx(const std::string& dirWithModels, const std::string& modelName);
+    cv::Mat preprocess(const cv::Mat& img) override;
 };
 } // namespace EmotiEffLib
 

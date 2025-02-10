@@ -7,13 +7,20 @@
 
 namespace EmotiEffLib {
 
+std::vector<std::string> getAvailableBackends();
+
 class EmotiEffLibRecognizer {
 public:
-    EmotiEffLibRecognizer(const std::string& modelPath);
     virtual ~EmotiEffLibRecognizer() = default;
+    static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const std::string& engine,
+                                                                 const std::string& modelPath);
+    static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const std::string& engine,
+                                                                 const std::string& dirWithModels,
+                                                                 const std::string& modelName);
 
 protected:
-    // virtual cv::Mat preprocess(const cv::Mat& img) = 0;
+    EmotiEffLibRecognizer(const std::string& modelPath);
+    virtual cv::Mat preprocess(const cv::Mat& img) = 0;
     // virtual void extractFeatures(const cv::Mat& img) = 0;
     //// def classify_emotions(features: np.ndarray, logits: bool = True) -> Tuple[List[str],
     // np.ndarray]:
@@ -28,10 +35,6 @@ protected:
     bool isMtl_;
     int imgSize_;
 };
-
-std::vector<std::string> getAvailableBackends();
-std::unique_ptr<EmotiEffLibRecognizer> createEmotiEffLibRecognizer(const std::string& engine,
-                                                                   const std::string& modelPath);
 
 } // namespace EmotiEffLib
 
