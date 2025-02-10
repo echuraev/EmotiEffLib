@@ -3,6 +3,8 @@
 
 #include "emotiefflib/facial_analysis.h"
 
+#include <torch/script.h>
+
 namespace EmotiEffLib {
 class EmotiEffLibRecognizerTorch : public EmotiEffLibRecognizer {
 public:
@@ -10,7 +12,10 @@ public:
     EmotiEffLibRecognizerTorch(const std::string& dirWithModels, const std::string& modelName);
 
 private:
-    cv::Mat preprocess(const cv::Mat& img) override;
+    xt::xarray<float> preprocess(const cv::Mat& img) override;
+
+private:
+    std::vector<torch::jit::script::Module> models;
 };
 } // namespace EmotiEffLib
 

@@ -3,6 +3,8 @@
 
 #include <onnxruntime_cxx_api.h>
 
+#include <xtensor/xadapt.hpp>
+
 namespace EmotiEffLib {
 EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPath)
     : EmotiEffLibRecognizer(modelPath) {
@@ -38,7 +40,7 @@ EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& dirWithM
                                                      const std::string& modelName)
     : EmotiEffLibRecognizer(modelName) {}
 
-cv::Mat EmotiEffLibRecognizerOnnx::preprocess(const cv::Mat& img) {
+xt::xarray<float> EmotiEffLibRecognizerOnnx::preprocess(const cv::Mat& img) {
     cv::Mat resized_img, float_img, normalized_img;
 
     // Resize the image
@@ -57,15 +59,19 @@ cv::Mat EmotiEffLibRecognizerOnnx::preprocess(const cv::Mat& img) {
     // Merge back the channels
     cv::merge(channels, normalized_img);
 
-    return normalized_img;
-    //// Convert HWC to CHW format
-    // std::vector<cv::Mat> chw(3);
-    // cv::split(normalized_img, chw);
-    // cv::Mat input_blob;
-    // cv::vconcat(chw, input_blob);
+    // Convert HWC OpenCV Mat to CHW xtensor
+    std::vector<float> chwData;
+    chwData.reserve(3 * imgSize_ * imgSize_);
 
-    // return input_blob;
-    //  Add batch dimension (1, C, H, W)
-    // return input_blob.reshape(1, {1, 3, imgSize_, imgSize_});
+    for (int c = 0; c < 3; ++c) {
+        for (int h = 0; h < imgSize_; ++h) {
+            for (int w = 0; w < imgSize_; ++w) {
+                chwData.push_back(normalized_img.at<cv::Vec3f>(h, w)[c]);
+            }
+        }
+    }
+
+    // Adapt vector to xt::xarray<float> with NCHW shape
+    return xt::adapt(chwData, {1, 3, imgSize_, imgSize_});
 }
 } // namespace EmotiEffLib

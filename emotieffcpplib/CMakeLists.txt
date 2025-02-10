@@ -18,12 +18,21 @@ if(NOT WITH_TORCH AND NOT WITH_ONNX)
     message(FATAL_ERROR "At least one inference engine should be specified: -DWITH_TORCH or -DWITH_ONNX")
 endif()
 
+set(ORIG_VALUE_BUILD_TESTS ${BUILD_TESTS})
+set(BUILD_TESTS OFF)
+add_subdirectory("${PROJECT_SOURCE_DIR}/3rdparty/xtl")
+add_subdirectory("${PROJECT_SOURCE_DIR}/3rdparty/xtensor")
+set(BUILD_TESTS ${ORIG_VALUE_BUILD_TESTS})
+
 file(GLOB src_files
     "src/*.cpp"
 )
 
 set(LINK_LIBRARIES ${OpenCV_LIBS})
-set(INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include")
+set(INCLUDE_DIRS
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/3rdparty/xtensor/include"
+)
 
 if (WITH_TORCH)
     list(APPEND CMAKE_PREFIX_PATH "${WITH_TORCH}")
@@ -59,6 +68,7 @@ add_library(${PROJECT_NAME} STATIC
 
 target_link_libraries(${PROJECT_NAME}
     ${LINK_LIBRARIES}
+    xtensor
 )
 
 if(${BUILD_TESTS})
