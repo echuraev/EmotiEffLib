@@ -1,31 +1,36 @@
 #include "emotiefflib/backends/torch/facial_analysis.h"
 
-#include <torch/script.h>
-#include <torch/torch.h>
+#include <filesystem>
+
+#include <xtensor/xadapt.hpp>
+
+namespace fs = std::filesystem;
 
 namespace EmotiEffLib {
 EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& modelPath)
     : EmotiEffLibRecognizer(modelPath) {
     torch::jit::script::Module model = torch::jit::load(modelPath);
+    models.push_back(model);
     bool isB0 = modelName_.find("_b0_") != std::string::npos;
     imgSize_ = isB0 ? 224 : 260;
-    auto x = torch::randn({1, 3, 224, 224});
-    auto output = model.forward({x}).toTensor();
-    std::cout << "Output shape: " << output.sizes() << std::endl;
 }
 
 EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& dirWithModels,
                                                        const std::string& modelName)
     : EmotiEffLibRecognizer(modelName) {
-    // torch::jit::script::Module model = torch::jit::load(modelPath);
-    // bool isB0 = modelName_.find("_b0_") != std::string::npos;
-    // imgSize_ = isB0 ? 224 : 260;
-    // auto x = torch::randn({1, 3, 224, 224});
-    // auto output = model.forward({x}).toTensor();
-    // std::cout << "Output shape: " << output.sizes() << std::endl;
+    fs::path featureExtractorPath(dirWithModels);
+    featureExtractorPath /= modelName + ".pt";
+    fs::path classifierPath(dirWithModels);
+    classifierPath /= "classifier_" + modelName + ".pt";
+    torch::jit::script::Module featureExtractor = torch::jit::load(featureExtractorPath);
+    torch::jit::script::Module classifier = torch::jit::load(classifierPath);
+    models.push_back(featureExtractor);
+    models.push_back(classifier);
+    bool isB0 = modelName_.find("_b0_") != std::string::npos;
+    imgSize_ = isB0 ? 224 : 260;
 }
 
-cv::Mat EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
+xt::xarray<float> EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
     cv::Mat resized, float_img, normalized;
 
     // Resize the image to (img_size, img_size)
@@ -47,6 +52,10 @@ cv::Mat EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
 
     cv::merge(channels, normalized);
 
-    return normalized;
+    // Convert HWC OpenCV Mat to xtensor
+    std::vector<float> hwcData;
+    hwcData.assign((float*)normalized.datastart, (float*)normalized.dataend);
+
+    return xt::adapt(hwcData, {imgSize_, imgSize_, 3});
 }
 } // namespace EmotiEffLib

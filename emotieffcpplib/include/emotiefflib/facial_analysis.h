@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
+#include <xtensor/xarray.hpp>
 
 namespace EmotiEffLib {
 
@@ -20,7 +21,7 @@ public:
 
 protected:
     EmotiEffLibRecognizer(const std::string& modelPath);
-    virtual cv::Mat preprocess(const cv::Mat& img) = 0;
+    virtual xt::xarray<float> preprocess(const cv::Mat& img) = 0;
     // virtual void extractFeatures(const cv::Mat& img) = 0;
     //// def classify_emotions(features: np.ndarray, logits: bool = True) -> Tuple[List[str],
     // np.ndarray]:
