@@ -7,6 +7,44 @@
 namespace fs = std::filesystem;
 
 namespace EmotiEffLib {
+std::vector<std::string> getAvailableBackends() {
+    return {
+#ifdef WITH_TORCH
+        "torch",
+#endif
+#ifdef WITH_ONNX
+        "onnx",
+#endif
+    };
+}
+
+std::unique_ptr<EmotiEffLibRecognizer>
+EmotiEffLibRecognizer::createInstance(const std::string& engine, const std::string& modelPath) {
+    auto backends = getAvailableBackends();
+    auto it = std::find(backends.begin(), backends.end(), engine);
+    if (it == backends.end()) {
+        throw std::runtime_error("This backend (" + engine +
+                                 ") is not supported. Please check your EmotiEffLib build.");
+    }
+    if (engine == "torch")
+        return std::make_unique<EmotiEffLibRecognizerTorch>(modelPath);
+    return std::make_unique<EmotiEffLibRecognizerOnnx>(modelPath);
+}
+
+std::unique_ptr<EmotiEffLibRecognizer>
+EmotiEffLibRecognizer::createInstance(const std::string& engine, const std::string& dirWithModels,
+                                      const std::string& modelName) {
+    auto backends = getAvailableBackends();
+    auto it = std::find(backends.begin(), backends.end(), engine);
+    if (it == backends.end()) {
+        throw std::runtime_error("This backend (" + engine +
+                                 ") is not supported. Please check your EmotiEffLib build.");
+    }
+    if (engine == "torch")
+        return std::make_unique<EmotiEffLibRecognizerTorch>(dirWithModels, modelName);
+    return std::make_unique<EmotiEffLibRecognizerOnnx>(dirWithModels, modelName);
+}
+
 EmotiEffLibRecognizer::EmotiEffLibRecognizer(const std::string& modelPath) {
     modelName_ = fs::path(modelPath).filename().string();
     isMtl_ = modelName_.find("_mtl") != std::string::npos;
@@ -33,27 +71,4 @@ EmotiEffLibRecognizer::EmotiEffLibRecognizer(const std::string& modelPath) {
     }
 }
 
-std::vector<std::string> getAvailableBackends() {
-    return {
-#ifdef WITH_TORCH
-        "torch",
-#endif
-#ifdef WITH_ONNX
-        "onnx",
-#endif
-    };
-}
-
-std::unique_ptr<EmotiEffLibRecognizer> createEmotiEffLibRecognizer(const std::string& engine,
-                                                                   const std::string& modelPath) {
-    auto backends = getAvailableBackends();
-    auto it = std::find(backends.begin(), backends.end(), engine);
-    if (it == backends.end()) {
-        throw std::runtime_error("This backend (" + engine +
-                                 ") is not supported. Please check your EmotiEffLib build.");
-    }
-    if (engine == "torch")
-        return std::make_unique<EmotiEffLibRecognizerTorch>(modelPath);
-    return std::make_unique<EmotiEffLibRecognizerOnnx>(modelPath);
-}
 } // namespace EmotiEffLib

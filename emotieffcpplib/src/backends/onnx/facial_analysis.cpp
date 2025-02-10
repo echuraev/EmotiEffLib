@@ -17,6 +17,22 @@ EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPat
     //     return -1;
     // }
 
-    // std::cout << "Model loaded successfully!" << std::endl;
+    std::cout << "Model loaded successfully!" << std::endl;
+
+    if (modelName_.find("mbf_") != std::string::npos) {
+        imgSize_ = 112;
+    } else if (modelName_.find("_b2_") != std::string::npos) {
+        imgSize_ = 260;
+    } else if (modelName_.find("ddamfnet") != std::string::npos) {
+        imgSize_ = 112;
+    } else {
+        imgSize_ = 224;
+    }
 }
+
+EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& dirWithModels,
+                                                     const std::string& modelName)
+    : EmotiEffLibRecognizer(modelName) {}
+
+cv::Mat EmotiEffLibRecognizerOnnx::preprocess(const cv::Mat& img) { return cv::Mat(); }
 } // namespace EmotiEffLib

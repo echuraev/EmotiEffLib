@@ -18,13 +18,13 @@ TEST_P(EmotiEffLibTests, Basic) {
     auto facialImages = recognizeFaces(frame);
 
     fs::path modelPath(getEmotiEffLibRootDir());
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
     if (backend == "torch") {
-        modelPath = modelPath / "models" / "traced_affectnet_emotions" / "enet_b0_8_best_vgaf.pt";
+        modelPath /= "enet_b0_8_best_vgaf.pt";
     } else {
-        modelPath =
-            modelPath / "models" / "affectnet_emotions" / "onnx" / "enet_b0_8_best_vgaf.onnx";
+        modelPath /= "enet_b0_8_best_vgaf.onnx";
     }
-    auto fer = EmotiEffLib::createEmotiEffLibRecognizer(backend, modelPath);
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
 }
 
 INSTANTIATE_TEST_SUITE_P(Basic, EmotiEffLibTests,
