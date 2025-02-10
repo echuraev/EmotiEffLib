@@ -25,5 +25,28 @@ EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& dirWit
     // std::cout << "Output shape: " << output.sizes() << std::endl;
 }
 
-cv::Mat EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) { return cv::Mat(); }
+cv::Mat EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
+    cv::Mat resized, float_img, normalized;
+
+    // Resize the image to (img_size, img_size)
+    cv::resize(img, resized, cv::Size(imgSize_, imgSize_));
+
+    // Convert to float and scale to [0, 1]
+    resized.convertTo(float_img, CV_32F, 1.0 / 255.0);
+
+    // Normalize using mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225]
+    std::vector<cv::Mat> channels(3);
+    cv::split(float_img, channels);
+
+    std::vector<float> mean = {0.485f, 0.456f, 0.406f};
+    std::vector<float> std = {0.229f, 0.224f, 0.225f};
+
+    for (int i = 0; i < 3; ++i) {
+        channels[i] = (channels[i] - mean[i]) / std[i];
+    }
+
+    cv::merge(channels, normalized);
+
+    return normalized;
+}
 } // namespace EmotiEffLib
