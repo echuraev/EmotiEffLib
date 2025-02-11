@@ -69,8 +69,6 @@ EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPat
     Ort::Session model(env_, modelPath.c_str(), session_options);
     models_.push_back(std::move(model));
 
-    std::cout << "Model loaded successfully!" << std::endl;
-
     mean_ = {0.485, 0.456, 0.406};
     std_ = {0.229, 0.224, 0.225};
     if (modelName_.find("mbf_") != std::string::npos) {

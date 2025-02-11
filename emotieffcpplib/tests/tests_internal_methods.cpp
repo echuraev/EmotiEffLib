@@ -70,14 +70,23 @@ TEST_P(EmotiEffLibInternalTests, ImagePreprocessing) {
                                     {1.1759, 1.6291, -1.2293, -1.5430, 0.2173},
                                     {1.0017, 0.6182, -1.7522, -0.2358, 0.3916}}};
 
-    if (backend == "torch") {
-        expTensor = xt::transpose(expTensor, {1, 2, 0});
-    } else {
-        expTensor = xt::expand_dims(expTensor, 0);
-    }
+    expTensor = xt::expand_dims(expTensor, 0);
 
     EXPECT_TRUE(xt::allclose(res, expTensor, 1e-4, 1e-4));
 }
 
-INSTANTIATE_TEST_SUITE_P(ImagePreprocessing, EmotiEffLibInternalTests,
-                         ::testing::ValuesIn(EmotiEffLib::getAvailableBackends()));
+std::string
+TestNameGenerator(const ::testing::TestParamInfo<EmotiEffLibInternalTests::ParamType>& info) {
+    auto backend = info.param;
+    std::ostringstream name;
+    name << "backend_" << backend;
+
+    // Replace invalid characters for test names
+    std::string name_str = name.str();
+    std::replace(name_str.begin(), name_str.end(), '.', '_'); // Replace dots
+    return name_str;
+}
+
+INSTANTIATE_TEST_SUITE_P(InternalMethods, EmotiEffLibInternalTests,
+                         ::testing::ValuesIn(EmotiEffLib::getAvailableBackends()),
+                         TestNameGenerator);
