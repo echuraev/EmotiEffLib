@@ -9,6 +9,12 @@
 namespace EmotiEffLib {
 
 std::vector<std::string> getAvailableBackends();
+std::vector<std::string> getSupportedModels();
+
+struct EmotiEffLibRes {
+    std::vector<std::string> labels;
+    xt::xarray<float> scores;
+};
 
 class EmotiEffLibRecognizer {
 public:
@@ -18,17 +24,23 @@ public:
     static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const std::string& engine,
                                                                  const std::string& dirWithModels,
                                                                  const std::string& modelName);
+    // virtual xt::xarray<float> extractFeatures(const xt::xarray<float>& faceImg) = 0;
+    // virtual xt::xarray<float> extractFeatures(const std::vector<xt::xarray<float>>& faceImgs) =
+    // 0; virtual EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features,
+    //                                         bool logits = true) = 0;
+    // virtual EmotiEffLibRes classifyEngagement(const xt::xarray<float>& features,
+    //                                           int slidingWindowWidth = 128) = 0;
+    virtual EmotiEffLibRes precictEmotions(const cv::Mat& faceImg, bool logits = true) = 0;
+    // virtual EmotiEffLibRes precictEmotions(const std::vector<cv::Mat>& faceImgs,
+    //                                        bool logits = true) = 0;
+    // virtual EmotiEffLibRes precictEngagement(const std::vector<cv::Mat>& faceImgs,
+    //                                          int slidingWindowWidth = 128) = 0;
 
 protected:
     EmotiEffLibRecognizer(const std::string& modelPath);
     virtual xt::xarray<float> preprocess(const cv::Mat& img) = 0;
-    // virtual void extractFeatures(const cv::Mat& img) = 0;
-    //// def classify_emotions(features: np.ndarray, logits: bool = True) -> Tuple[List[str],
-    // np.ndarray]:
-    //// def classify_engagement(features: np.ndarray, sliding_window_width: int = 128):
-    //// def predict_emotions(face_img: Union[np.ndarray, List[np.ndarray]], logits: bool = True)
-    //-> Tuple[List[str], np.ndarray]:
-    //// def predict_engagement(features: np.ndarray, sliding_window_width: int = 128):
+    EmotiEffLibRes processScores(const xt::xarray<float>& scores, bool logits);
+
 protected:
     std::vector<std::string> idxToEngagementClass_ = {"Distracted", "Engaged"};
     std::vector<std::string> idxToEmotionClass_;

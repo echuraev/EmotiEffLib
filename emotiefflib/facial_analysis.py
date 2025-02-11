@@ -150,13 +150,10 @@ class EmotiEffLibRecognizerBase(ABC):
         """
         scores = self._get_probab(features)
         if self.is_mtl:
-            preds = np.argmax(scores[:, :-2], axis=1)
-        else:
-            preds = np.argmax(scores, axis=1)
-        if self.is_mtl:
             x = scores[:, :-2]
         else:
             x = scores
+        preds = np.argmax(x, axis=1)
 
         if not logits:
             e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
