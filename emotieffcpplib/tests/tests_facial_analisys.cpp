@@ -37,9 +37,9 @@ TEST_P(EmotiEffLibTests, OneImagePrediction) {
         expEmotions = {"Anger", "Happiness", "Fear"};
     }
     std::vector<std::string> emotions;
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
     for (auto& face : facialImages) {
-        auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
-        auto res = fer->precictEmotions(face, false);
+        auto res = fer->precictEmotions(face, true);
         emotions.push_back(res.labels[0]);
     }
 
