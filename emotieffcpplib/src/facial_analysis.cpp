@@ -4,6 +4,10 @@
 
 #include <filesystem>
 
+#include <xtensor/xmath.hpp>
+#include <xtensor/xsort.hpp>
+#include <xtensor/xview.hpp>
+
 namespace fs = std::filesystem;
 
 namespace EmotiEffLib {
@@ -15,6 +19,12 @@ std::vector<std::string> getAvailableBackends() {
 #ifdef WITH_ONNX
         "onnx",
 #endif
+    };
+}
+
+std::vector<std::string> getSupportedModels() {
+    return {
+        "enet_b0_8_best_vgaf", "enet_b0_8_best_afew", "enet_b2_8", "enet_b0_8_va_mtl", "enet_b2_7",
     };
 }
 
@@ -69,6 +79,43 @@ EmotiEffLibRecognizer::EmotiEffLibRecognizer(const std::string& modelPath) {
         idxToEmotionClass_[6] = "Sadness";
         idxToEmotionClass_[7] = "Surprise";
     }
+}
+
+EmotiEffLibRes EmotiEffLibRecognizer::processScores(const xt::xarray<float>& score, bool logits) {
+    xt::xarray<float> x;
+    xt::xarray<float> scores = score;
+    // Select relevant part of the scores based on is_mtl
+    if (isMtl_) {
+        x = xt::view(scores, xt::all(),
+                     xt::range(xt::placeholders::_, -2)); // Equivalent to scores[:, :-2]
+    } else {
+        x = scores;
+    }
+
+    // Compute predictions
+    auto preds = xt::argmax(x, 1);
+
+    // Apply softmax if logits is false
+    if (!logits) {
+        xt::xarray<float> max_x = xt::amax(x, {1}, xt::evaluation_strategy::immediate);
+        xt::xarray<float> e_x = xt::exp(x - max_x);
+        e_x /= xt::sum(e_x, {1}, xt::evaluation_strategy::immediate);
+
+        if (isMtl_) {
+            xt::view(scores, xt::all(), xt::range(xt::placeholders::_, -2)) =
+                e_x; // Modify in-place
+        } else {
+            scores = e_x; // Replace scores with softmaxed values
+        }
+    }
+
+    // Convert predictions to emotion class names
+    EmotiEffLibRes res;
+    for (auto pred : preds) {
+        res.labels.push_back(idxToEmotionClass_[pred]);
+    }
+    res.scores = scores;
+    return res;
 }
 
 } // namespace EmotiEffLib

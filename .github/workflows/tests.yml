@@ -93,7 +93,7 @@ jobs:
           cmake --build build --config Release -- -j$(nproc)
 
       - name: Prepare torch models
-        run: python3 models/trace_torch_models.py
+        run: python3 models/prepare_models_for_emotieffcpplib.py
 
       - name: Run GTests
         run: |

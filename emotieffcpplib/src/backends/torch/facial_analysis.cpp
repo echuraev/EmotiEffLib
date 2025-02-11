@@ -6,6 +6,33 @@
 
 namespace fs = std::filesystem;
 
+namespace {
+// Convert xt::xarray to torch::Tensor
+torch::Tensor xarray2tensor(const xt::xarray<float>& xtensor) {
+    std::vector<int64_t> shape(xtensor.shape().begin(), xtensor.shape().end());
+    std::vector<float> data(xtensor.begin(), xtensor.end());
+
+    return torch::from_blob(data.data(), shape, torch::TensorOptions().dtype(torch::kFloat))
+        .clone();
+}
+
+// Convert torch::Tensor to xt::xarray
+xt::xarray<float> tensor2xarray(const torch::Tensor& tensor) {
+    torch::Tensor cpu_tensor =
+        tensor.to(torch::kCPU).contiguous(); // Ensure CPU and contiguous memory
+
+    // Get shape and data pointer
+    std::vector<size_t> shape(cpu_tensor.sizes().begin(), cpu_tensor.sizes().end());
+    const float* data_ptr = cpu_tensor.data_ptr<float>();
+
+    // Adapt to xt::xarray
+    return xt::adapt(data_ptr, cpu_tensor.numel(), xt::no_ownership(), shape);
+    xt::xarray<float> result = xt::zeros<float>(shape);
+    std::copy(data_ptr, data_ptr + tensor.numel(), result.begin());
+    return result;
+}
+} // namespace
+
 namespace EmotiEffLib {
 EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& modelPath)
     : EmotiEffLibRecognizer(modelPath) {
@@ -30,6 +57,23 @@ EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& dirWit
     imgSize_ = isB0 ? 224 : 260;
 }
 
+EmotiEffLibRes EmotiEffLibRecognizerTorch::precictEmotions(const cv::Mat& faceImg, bool logits) {
+    auto imgTensor = preprocess(faceImg);
+    auto input = xarray2tensor(imgTensor);
+    // std::cout << "Tensor shape: (";
+    // for (size_t i = 0; i < input.sizes().size(); ++i) {
+    //     std::cout << input.sizes()[i];
+    //     if (i < input.sizes().size() - 1) {
+    //         std::cout << ", ";
+    //     }
+    // }
+    // std::cout << ")" << std::endl;
+    auto scoresTensor = models[0].forward({input}).toTensor();
+    auto scores = tensor2xarray(scoresTensor);
+
+    return processScores(scores, logits);
+}
+
 xt::xarray<float> EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
     cv::Mat resized, float_img, normalized;
 
@@ -52,10 +96,25 @@ xt::xarray<float> EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
 
     cv::merge(channels, normalized);
 
-    // Convert HWC OpenCV Mat to xtensor
-    std::vector<float> hwcData;
-    hwcData.assign((float*)normalized.datastart, (float*)normalized.dataend);
+    // Convert HWC OpenCV Mat to CHW xtensor
+    std::vector<float> chwData;
+    chwData.reserve(3 * imgSize_ * imgSize_);
 
-    return xt::adapt(hwcData, {imgSize_, imgSize_, 3});
+    for (int c = 0; c < 3; ++c) {
+        for (int h = 0; h < imgSize_; ++h) {
+            for (int w = 0; w < imgSize_; ++w) {
+                chwData.push_back(normalized.at<cv::Vec3f>(h, w)[c]);
+            }
+        }
+    }
+
+    // Adapt vector to xt::xarray<float> with NCHW shape
+    return xt::adapt(chwData, {1, 3, imgSize_, imgSize_});
+    //// Convert HWC OpenCV Mat to xtensor
+    // std::vector<float> hwcData;
+    // hwcData.assign((float*)normalized.datastart, (float*)normalized.dataend);
+
+    //// to NHWC
+    // return xt::adapt(hwcData, {1, imgSize_, imgSize_, 3});
 }
 } // namespace EmotiEffLib
