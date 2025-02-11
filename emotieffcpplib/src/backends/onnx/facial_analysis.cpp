@@ -61,13 +61,12 @@ EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPat
     //     std::cout << provider << std::endl;
     // }
     //  Initialize ONNX Runtime
-    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "ONNXRuntime");
 
     // Define session options
     Ort::SessionOptions session_options;
 
     // Load the ONNX model
-    Ort::Session model(env, modelPath.c_str(), session_options);
+    Ort::Session model(env_, modelPath.c_str(), session_options);
     models_.push_back(std::move(model));
 
     std::cout << "Model loaded successfully!" << std::endl;
