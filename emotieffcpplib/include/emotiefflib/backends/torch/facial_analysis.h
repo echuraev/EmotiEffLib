@@ -6,17 +6,19 @@
 #include <torch/script.h>
 
 namespace EmotiEffLib {
-class EmotiEffLibRecognizerTorch : public EmotiEffLibRecognizer {
+class EmotiEffLibRecognizerTorch final : public EmotiEffLibRecognizer {
 public:
-    EmotiEffLibRecognizerTorch(const std::string& modelPath);
-    EmotiEffLibRecognizerTorch(const std::string& dirWithModels, const std::string& modelName);
+    EmotiEffLibRecognizerTorch(const std::string& fullPipelineModelPath);
+    EmotiEffLibRecognizerTorch(const EmotiEffLibConfig& config);
     EmotiEffLibRes precictEmotions(const cv::Mat& faceImg, bool logits = true) override;
 
 private:
+    void initRecognizer(const std::string& modelPath) override;
     xt::xarray<float> preprocess(const cv::Mat& img) override;
+    void configParser(const EmotiEffLibConfig& config) override;
 
 private:
-    std::vector<torch::jit::script::Module> models;
+    std::vector<torch::jit::script::Module> models_;
 };
 } // namespace EmotiEffLib
 

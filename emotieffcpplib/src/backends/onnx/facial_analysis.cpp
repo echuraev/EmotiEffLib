@@ -51,23 +51,79 @@ xt::xarray<float> tensor2xarray(const Ort::Value& tensor) {
     std::copy(data_ptr, data_ptr + element_count, result.begin());
     return result;
 }
+
+void checkModelInputs(const Ort::Session& session) {
+    if (session.GetInputCount() != 1 || session.GetOutputCount() != 1)
+        throw std::runtime_error("Only models with one input and one output are supported!");
+}
 } // namespace
 
 namespace EmotiEffLib {
-EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPath)
-    : EmotiEffLibRecognizer(modelPath) {
-    // auto providers = Ort::GetAvailableProviders();
-    // for (auto provider : providers) {
-    //     std::cout << provider << std::endl;
-    // }
-    //  Initialize ONNX Runtime
-
+EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& fullPipelineModel) {
     // Define session options
     Ort::SessionOptions session_options;
 
     // Load the ONNX model
-    Ort::Session model(env_, modelPath.c_str(), session_options);
+    Ort::Session model(env_, fullPipelineModel.c_str(), session_options);
     models_.push_back(std::move(model));
+    fullPipelineModelIdx_ = 0;
+    initRecognizer(fullPipelineModel);
+}
+
+EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const EmotiEffLibConfig& config) {
+    configParser(config);
+    initRecognizer(config.featureExtractorPath);
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerOnnx::precictEmotions(const cv::Mat& faceImg, bool logits) {
+    if (fullPipelineModelIdx_ == -1 && (featureExtractorIdx_ == -1 || classifierIdx_ == -1))
+        throw std::runtime_error("predictEmotions method requires fillPipeline model or "
+                                 "featureExtractor and classifier models");
+    auto imgTensor = preprocess(faceImg);
+
+    // Always in index 0 is the fullPipelineMode or featureExtractor model
+    // In this case doesn't matter which one is here.
+    auto& session = models_[0];
+    checkModelInputs(session);
+
+    Ort::AllocatorWithDefaultOptions allocator;
+
+    auto input_name = session.GetInputNameAllocated(0, allocator);
+    std::vector<const char*> inputNames = {input_name.get()};
+    std::vector<Ort::Value> inputTensors;
+    inputTensors.push_back(xarray2tensor(imgTensor));
+
+    auto outputName = session.GetOutputNameAllocated(0, allocator);
+    std::vector<const char*> outputNames = {outputName.get()};
+
+    // Run inference
+    auto outputTensors = session.Run(Ort::RunOptions{nullptr}, inputNames.data(),
+                                     inputTensors.data(), 1, outputNames.data(), 1);
+
+    xt::xarray<float> scores;
+    if (fullPipelineModelIdx_ == -1 && classifierIdx_ > -1) {
+        auto& classifier = models_[classifierIdx_];
+        checkModelInputs(classifier);
+        auto& classifierInputNames = outputNames;
+        auto& classifierInputTensors = outputTensors;
+        Ort::AllocatorWithDefaultOptions allocator;
+        auto outputName = classifier.GetOutputNameAllocated(0, allocator);
+        std::vector<const char*> classifierOutputNames = {outputName.get()};
+
+        // Run inference
+        auto classifierOutputTensors =
+            session.Run(Ort::RunOptions{nullptr}, classifierInputNames.data(),
+                        classifierInputTensors.data(), 1, classifierOutputNames.data(), 1);
+        scores = tensor2xarray(classifierOutputTensors[0]);
+    } else {
+        scores = tensor2xarray(outputTensors[0]);
+    }
+
+    return processScores(scores, logits);
+}
+
+void EmotiEffLibRecognizerOnnx::initRecognizer(const std::string& modelPath) {
+    EmotiEffLibRecognizer::initRecognizer(modelPath);
 
     mean_ = {0.485, 0.456, 0.406};
     std_ = {0.229, 0.224, 0.225};
@@ -82,47 +138,6 @@ EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& modelPat
     } else {
         imgSize_ = 224;
     }
-}
-
-EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const std::string& dirWithModels,
-                                                     const std::string& modelName)
-    : EmotiEffLibRecognizer(modelName) {
-    fs::path featureExtractorPath(dirWithModels);
-    featureExtractorPath /= modelName + ".pt";
-    fs::path classifierPath(dirWithModels);
-    classifierPath /= "classifier_" + modelName + ".pt";
-}
-
-EmotiEffLibRes EmotiEffLibRecognizerOnnx::precictEmotions(const cv::Mat& faceImg, bool logits) {
-    auto imgTensor = preprocess(faceImg);
-
-    auto& session = models_[0];
-
-    Ort::AllocatorWithDefaultOptions allocator;
-    // TODO:
-    //// Check numInputNodes
-    // size_t numInputNodes = session.GetInputCount();
-    //// Check numOutputNodes
-    // size_t numOutputNodes = session.GetOutputCount();
-
-    auto input_name = session.GetInputNameAllocated(0, allocator);
-    std::vector<const char*> input_names = {input_name.get()};
-    std::vector<Ort::Value> input_tensors;
-    input_tensors.push_back(xarray2tensor(imgTensor));
-
-    auto output_name = session.GetOutputNameAllocated(0, allocator);
-    std::vector<const char*> output_names = {output_name.get()};
-
-    // Run inference
-    auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_names.data(),
-                                      input_tensors.data(), 1, output_names.data(), 1);
-
-    // Print first few output values
-    auto scores = tensor2xarray(output_tensors[0]);
-
-    // std::vector<std::string> labels = {"None"};
-    // return {labels, scores};
-    return processScores(scores, logits);
 }
 
 xt::xarray<float> EmotiEffLibRecognizerOnnx::preprocess(const cv::Mat& img) {
@@ -158,5 +173,28 @@ xt::xarray<float> EmotiEffLibRecognizerOnnx::preprocess(const cv::Mat& img) {
 
     // Adapt vector to xt::xarray<float> with NCHW shape
     return xt::adapt(chwData, {1, 3, imgSize_, imgSize_});
+}
+
+void EmotiEffLibRecognizerOnnx::configParser(const EmotiEffLibConfig& config) {
+    if (!config.modelName.empty()) {
+        modelName_ = config.modelName;
+    }
+    // Define session options
+    Ort::SessionOptions session_options;
+
+    if (config.featureExtractorPath.empty()) {
+        throw std::runtime_error(
+            "featureExtractorPath MUST be specified in the EmotiEffLibConfig.");
+    } else {
+        // Load the ONNX model
+        Ort::Session model(env_, config.featureExtractorPath.c_str(), session_options);
+        models_.push_back(std::move(model));
+        featureExtractorIdx_ = models_.size() - 1;
+    }
+    if (!config.classifierPath.empty()) {
+        Ort::Session model(env_, config.classifierPath.c_str(), session_options);
+        models_.push_back(std::move(model));
+        classifierIdx_ = models_.size() - 1;
+    }
 }
 } // namespace EmotiEffLib
