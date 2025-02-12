@@ -104,16 +104,13 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::precictEmotions(const cv::Mat& faceImg
     if (fullPipelineModelIdx_ == -1 && classifierIdx_ > -1) {
         auto& classifier = models_[classifierIdx_];
         checkModelInputs(classifier);
-        auto& classifierInputNames = outputNames;
-        auto& classifierInputTensors = outputTensors;
-        Ort::AllocatorWithDefaultOptions allocator;
         auto outputName = classifier.GetOutputNameAllocated(0, allocator);
         std::vector<const char*> classifierOutputNames = {outputName.get()};
 
         // Run inference
         auto classifierOutputTensors =
-            session.Run(Ort::RunOptions{nullptr}, classifierInputNames.data(),
-                        classifierInputTensors.data(), 1, classifierOutputNames.data(), 1);
+            classifier.Run(Ort::RunOptions{nullptr}, outputNames.data(), outputTensors.data(), 1,
+                           classifierOutputNames.data(), 1);
         scores = tensor2xarray(classifierOutputTensors[0]);
     } else {
         scores = tensor2xarray(outputTensors[0]);

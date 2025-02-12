@@ -98,11 +98,12 @@ def prepare_torch_models() -> None:
             and os.path.exists(classifier_out)
         ):
             print(f"SKIP {mf}")
+            continue
         trace_model(inp, model_out, features_extractor_out, classifier_out)
 
 
 def split_onnx_model(
-    model_path: str, model_out: str, features_extractor_out, classifier_out: str
+    model_path: str, model_out: str, features_extractor_out: str, classifier_out: str
 ) -> None:
     """
     Split an ONNX model into a feature extractor and a classifier.
@@ -132,33 +133,59 @@ def split_onnx_model(
     new_output_name = gemm_node.input[0]
     if gemm_node is None or len(gemm_node.input) < 3:
         raise RuntimeError("Unexpected gemm node!")
+
     weight_name = gemm_node.input[1]
+    bias_name = gemm_node.input[2]
     weight_tensor = next((t for t in graph.initializer if t.name == weight_name), None)
-    classifier_weights = onnx.numpy_helper.to_array(weight_tensor) if weight_tensor else None
 
     # Remove the last node
     graph.node.remove(gemm_node)
     graph.output.remove(graph.output[0])
-    new_output_shape = [None, classifier_weights.shape[1]]
+
+    if weight_tensor:
+        new_output_shape = [None, onnx.numpy_helper.to_array(weight_tensor).shape[1]]
+    else:
+        new_output_shape = [None, None]
+
     new_output = helper.make_tensor_value_info(
         new_output_name, onnx.TensorProto.FLOAT, new_output_shape
     )
     graph.output.append(new_output)
 
-    # Model with the last node
-    # Create a new model for the last layer
-    new_graph = helper.make_graph(
+    # Create new model for classifier
+    classifier_graph = helper.make_graph(
         nodes=[gemm_node],
         name="classifier",
         inputs=[
-            helper.make_tensor_value_info(inp, onnx.TensorProto.FLOAT, None)
+            helper.make_tensor_value_info(inp, onnx.TensorProto.FLOAT, new_output_shape)
             for inp in gemm_node.input
         ],
         outputs=[helper.make_tensor_value_info(gemm_node.output[0], onnx.TensorProto.FLOAT, None)],
         initializer=[t for t in graph.initializer if t.name in gemm_node.input],
     )
 
-    classifier = helper.make_model(new_graph, producer_name="onnx-classifier")
+    # Remove initializers from inputs
+    inputs = classifier_graph.input
+    name_to_input = {}
+    for inp in inputs:
+        name_to_input[inp.name] = inp
+
+    for initializer in classifier_graph.initializer:
+        if initializer.name in name_to_input:
+            inputs.remove(name_to_input[initializer.name])
+
+    classifier = helper.make_model(
+        classifier_graph,
+        producer_name="onnx-classifier",
+        opset_imports=[helper.make_opsetid("", 21)],
+    )
+
+    # Remove unused initializers
+    name_to_init = {}
+    for init in graph.initializer:
+        name_to_init[init.name] = init
+    graph.initializer.remove(name_to_init[weight_name])
+    graph.initializer.remove(name_to_init[bias_name])
 
     onnx.save(model, features_extractor_out)
     onnx.save(classifier, classifier_out)
@@ -185,6 +212,7 @@ def prepare_onnx_models() -> None:
             and os.path.exists(classifier_out)
         ):
             print(f"SKIP {mf}")
+            continue
         split_onnx_model(inp, model_out, features_extractor_out, classifier_out)
 
 

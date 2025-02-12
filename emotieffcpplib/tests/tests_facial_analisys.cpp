@@ -14,7 +14,7 @@ using EmotiEffLibTestParams = std::tuple<std::string, std::string>;
 
 class EmotiEffLibTests : public ::testing::TestWithParam<EmotiEffLibTestParams> {};
 
-TEST_P(EmotiEffLibTests, OneImagePrediction) {
+TEST_P(EmotiEffLibTests, OneImagePredictionOneModel) {
     auto& [backend, modelName] = GetParam();
     std::string pyTestDir = getPathToPythonTestDir();
     fs::path imagePath(pyTestDir);
@@ -46,6 +46,42 @@ TEST_P(EmotiEffLibTests, OneImagePrediction) {
     ASSERT_TRUE(AreVectorsEqual(emotions, expEmotions));
 }
 
+TEST_P(EmotiEffLibTests, OneImagePredictionTwoModels) {
+    auto& [backend, modelName] = GetParam();
+    std::string pyTestDir = getPathToPythonTestDir();
+    fs::path imagePath(pyTestDir);
+    imagePath = imagePath / "test_images" / "20180720_174416.jpg";
+    cv::Mat frame = cv::imread(imagePath);
+    auto facialImages = recognizeFaces(frame);
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
+    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
+    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    EmotiEffLib::EmotiEffLibConfig config = {
+        .backend = backend,
+        .featureExtractorPath = featureExtractorPath,
+        .classifierPath = classifierPath,
+        .modelName = modelName,
+    };
+    std::vector<std::string> expEmotions;
+    if (modelName == "enet_b0_8_va_mtl" ||
+        (backend == "onnx" && modelName == "enet_b0_8_best_afew")) {
+        expEmotions = {"Anger", "Happiness", "Happiness"};
+    } else {
+        expEmotions = {"Anger", "Happiness", "Fear"};
+    }
+    std::vector<std::string> emotions;
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+    for (auto& face : facialImages) {
+        auto res = fer->precictEmotions(face, true);
+        emotions.push_back(res.labels[0]);
+    }
+
+    ASSERT_TRUE(AreVectorsEqual(emotions, expEmotions));
+}
+
 std::string TestNameGenerator(const ::testing::TestParamInfo<EmotiEffLibTests::ParamType>& info) {
     auto& [backend, modelName] = info.param;
     std::ostringstream name;
@@ -62,3 +98,50 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(EmotiEffLib::getAvailableBackends()),
                        ::testing::ValuesIn(EmotiEffLib::getSupportedModels())),
     TestNameGenerator);
+
+TEST(EmotiEffLibTests, CheckUnsupportedBackend) {
+    try {
+        EmotiEffLib::EmotiEffLibRecognizer::createInstance("OpenVINO", "my_model");
+        FAIL();
+    } catch (const std::runtime_error& e) {
+        EXPECT_EQ("This backend (OpenVINO) is not supported. Please check your EmotiEffLib build "
+                  "or configuration.",
+                  std::string(e.what()));
+    } catch (...) {
+        FAIL();
+    }
+}
+
+TEST(EmotiEffLibTests, CheckIncorrectConfig) {
+    EmotiEffLib::EmotiEffLibConfig config;
+    try {
+        EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+        FAIL();
+    } catch (const std::runtime_error& e) {
+        EXPECT_EQ("This backend () is not supported. Please check your EmotiEffLib build or "
+                  "configuration.",
+                  std::string(e.what()));
+    } catch (...) {
+        FAIL();
+    }
+    config = {.backend = "torch", .classifierPath = "bla-bla", .modelName = "bla-bla"};
+    try {
+        EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+        FAIL();
+    } catch (const std::runtime_error& e) {
+        EXPECT_EQ("featureExtractorPath MUST be specified in the EmotiEffLibConfig.",
+                  std::string(e.what()));
+    } catch (...) {
+        FAIL();
+    }
+    config.backend = "onnx";
+    try {
+        EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+        FAIL();
+    } catch (const std::runtime_error& e) {
+        EXPECT_EQ("featureExtractorPath MUST be specified in the EmotiEffLibConfig.",
+                  std::string(e.what()));
+    } catch (...) {
+        FAIL();
+    }
+}
