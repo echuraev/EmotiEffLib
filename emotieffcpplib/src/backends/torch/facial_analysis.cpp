@@ -34,44 +34,43 @@ xt::xarray<float> tensor2xarray(const torch::Tensor& tensor) {
 } // namespace
 
 namespace EmotiEffLib {
-EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& modelPath)
-    : EmotiEffLibRecognizer(modelPath) {
-    torch::jit::script::Module model = torch::jit::load(modelPath);
-    models.push_back(model);
-    bool isB0 = modelName_.find("_b0_") != std::string::npos;
-    imgSize_ = isB0 ? 224 : 260;
+EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& fullPipelineModel) {
+    torch::jit::script::Module model = torch::jit::load(fullPipelineModel);
+    models_.push_back(model);
+    fullPipelineModelIdx_ = 0;
+    initRecognizer(fullPipelineModel);
 }
 
-EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& dirWithModels,
-                                                       const std::string& modelName)
-    : EmotiEffLibRecognizer(modelName) {
-    fs::path featureExtractorPath(dirWithModels);
-    featureExtractorPath /= modelName + ".pt";
-    fs::path classifierPath(dirWithModels);
-    classifierPath /= "classifier_" + modelName + ".pt";
-    torch::jit::script::Module featureExtractor = torch::jit::load(featureExtractorPath);
-    torch::jit::script::Module classifier = torch::jit::load(classifierPath);
-    models.push_back(featureExtractor);
-    models.push_back(classifier);
-    bool isB0 = modelName_.find("_b0_") != std::string::npos;
-    imgSize_ = isB0 ? 224 : 260;
+EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const EmotiEffLibConfig& config) {
+    configParser(config);
+    initRecognizer(config.featureExtractorPath);
 }
 
 EmotiEffLibRes EmotiEffLibRecognizerTorch::precictEmotions(const cv::Mat& faceImg, bool logits) {
+    if (fullPipelineModelIdx_ == -1 && (featureExtractorIdx_ == -1 || classifierIdx_ == -1))
+        throw std::runtime_error("predictEmotions method requires fillPipeline model or "
+                                 "featureExtractor and classifier models");
     auto imgTensor = preprocess(faceImg);
     auto input = xarray2tensor(imgTensor);
-    // std::cout << "Tensor shape: (";
-    // for (size_t i = 0; i < input.sizes().size(); ++i) {
-    //     std::cout << input.sizes()[i];
-    //     if (i < input.sizes().size() - 1) {
-    //         std::cout << ", ";
-    //     }
-    // }
-    // std::cout << ")" << std::endl;
-    auto scoresTensor = models[0].forward({input}).toTensor();
-    auto scores = tensor2xarray(scoresTensor);
+    // Always in index 0 is the fullPipelineMode or featureExtractor model
+    // In this case doesn't matter which one is here.
+    auto outputTensor = models_[0].forward({input}).toTensor();
+    xt::xarray<float> scores;
+    if (fullPipelineModelIdx_ == -1 && classifierIdx_ > -1) {
+        auto classifierOutput = models_[classifierIdx_].forward({outputTensor}).toTensor();
+        scores = tensor2xarray(classifierOutput);
+    } else {
+        scores = tensor2xarray(outputTensor);
+    }
 
     return processScores(scores, logits);
+}
+
+void EmotiEffLibRecognizerTorch::initRecognizer(const std::string& modelPath) {
+    EmotiEffLibRecognizer::initRecognizer(modelPath);
+
+    bool isB0 = modelName_.find("_b0_") != std::string::npos;
+    imgSize_ = isB0 ? 224 : 260;
 }
 
 xt::xarray<float> EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
@@ -110,11 +109,25 @@ xt::xarray<float> EmotiEffLibRecognizerTorch::preprocess(const cv::Mat& img) {
 
     // Adapt vector to xt::xarray<float> with NCHW shape
     return xt::adapt(chwData, {1, 3, imgSize_, imgSize_});
-    //// Convert HWC OpenCV Mat to xtensor
-    // std::vector<float> hwcData;
-    // hwcData.assign((float*)normalized.datastart, (float*)normalized.dataend);
+}
 
-    //// to NHWC
-    // return xt::adapt(hwcData, {1, imgSize_, imgSize_, 3});
+void EmotiEffLibRecognizerTorch::configParser(const EmotiEffLibConfig& config) {
+    if (!config.modelName.empty()) {
+        modelName_ = config.modelName;
+    }
+
+    if (config.featureExtractorPath.empty()) {
+        throw std::runtime_error(
+            "featureExtractorPath MUST be specified in the EmotiEffLibConfig.");
+    } else {
+        torch::jit::script::Module model = torch::jit::load(config.featureExtractorPath);
+        models_.push_back(model);
+        featureExtractorIdx_ = models_.size() - 1;
+    }
+    if (!config.classifierPath.empty()) {
+        torch::jit::script::Module model = torch::jit::load(config.classifierPath);
+        models_.push_back(model);
+        classifierIdx_ = models_.size() - 1;
+    }
 }
 } // namespace EmotiEffLib

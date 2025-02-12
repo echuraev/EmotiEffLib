@@ -16,14 +16,19 @@ struct EmotiEffLibRes {
     xt::xarray<float> scores;
 };
 
+struct EmotiEffLibConfig {
+    std::string backend;
+    std::string featureExtractorPath;
+    std::string classifierPath;
+    std::string modelName = "";
+};
+
 class EmotiEffLibRecognizer {
 public:
     virtual ~EmotiEffLibRecognizer() = default;
-    static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const std::string& engine,
-                                                                 const std::string& modelPath);
-    static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const std::string& engine,
-                                                                 const std::string& dirWithModels,
-                                                                 const std::string& modelName);
+    static std::unique_ptr<EmotiEffLibRecognizer>
+    createInstance(const std::string& backend, const std::string& fullPipelineModelPath);
+    static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const EmotiEffLibConfig& config);
     // virtual xt::xarray<float> extractFeatures(const xt::xarray<float>& faceImg) = 0;
     // virtual xt::xarray<float> extractFeatures(const std::vector<xt::xarray<float>>& faceImgs) =
     // 0; virtual EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features,
@@ -37,14 +42,21 @@ public:
     //                                          int slidingWindowWidth = 128) = 0;
 
 protected:
-    EmotiEffLibRecognizer(const std::string& modelPath);
-    virtual xt::xarray<float> preprocess(const cv::Mat& img) = 0;
+    virtual void initRecognizer(const std::string& modelPath);
     EmotiEffLibRes processScores(const xt::xarray<float>& scores, bool logits);
+    virtual void configParser(const EmotiEffLibConfig& config) = 0;
+    virtual xt::xarray<float> preprocess(const cv::Mat& img) = 0;
+
+private:
+    static void checkBackend(const std::string& backend);
 
 protected:
+    std::string modelName_ = "";
+    int fullPipelineModelIdx_ = -1;
+    int featureExtractorIdx_ = -1;
+    int classifierIdx_ = -1;
     std::vector<std::string> idxToEngagementClass_ = {"Distracted", "Engaged"};
     std::vector<std::string> idxToEmotionClass_;
-    std::string modelName_;
     bool isMtl_;
     int imgSize_;
 };

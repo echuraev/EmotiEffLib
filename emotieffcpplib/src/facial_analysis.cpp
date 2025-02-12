@@ -29,34 +29,27 @@ std::vector<std::string> getSupportedModels() {
 }
 
 std::unique_ptr<EmotiEffLibRecognizer>
-EmotiEffLibRecognizer::createInstance(const std::string& engine, const std::string& modelPath) {
-    auto backends = getAvailableBackends();
-    auto it = std::find(backends.begin(), backends.end(), engine);
-    if (it == backends.end()) {
-        throw std::runtime_error("This backend (" + engine +
-                                 ") is not supported. Please check your EmotiEffLib build.");
-    }
-    if (engine == "torch")
-        return std::make_unique<EmotiEffLibRecognizerTorch>(modelPath);
-    return std::make_unique<EmotiEffLibRecognizerOnnx>(modelPath);
+EmotiEffLibRecognizer::createInstance(const std::string& backend,
+                                      const std::string& fullPipelineModelPath) {
+    checkBackend(backend);
+    if (backend == "torch")
+        return std::make_unique<EmotiEffLibRecognizerTorch>(fullPipelineModelPath);
+    return std::make_unique<EmotiEffLibRecognizerOnnx>(fullPipelineModelPath);
 }
 
 std::unique_ptr<EmotiEffLibRecognizer>
-EmotiEffLibRecognizer::createInstance(const std::string& engine, const std::string& dirWithModels,
-                                      const std::string& modelName) {
-    auto backends = getAvailableBackends();
-    auto it = std::find(backends.begin(), backends.end(), engine);
-    if (it == backends.end()) {
-        throw std::runtime_error("This backend (" + engine +
-                                 ") is not supported. Please check your EmotiEffLib build.");
-    }
-    if (engine == "torch")
-        return std::make_unique<EmotiEffLibRecognizerTorch>(dirWithModels, modelName);
-    return std::make_unique<EmotiEffLibRecognizerOnnx>(dirWithModels, modelName);
+EmotiEffLibRecognizer::createInstance(const EmotiEffLibConfig& config) {
+    checkBackend(config.backend);
+    if (config.backend == "torch")
+        return std::make_unique<EmotiEffLibRecognizerTorch>(config);
+    return std::make_unique<EmotiEffLibRecognizerOnnx>(config);
 }
 
-EmotiEffLibRecognizer::EmotiEffLibRecognizer(const std::string& modelPath) {
-    modelName_ = fs::path(modelPath).filename().string();
+void EmotiEffLibRecognizer::initRecognizer(const std::string& modelPath) {
+    // Do not change modelName if it was explicitly specified in the config
+    if (modelName_.empty()) {
+        modelName_ = fs::path(modelPath).filename().string();
+    }
     isMtl_ = modelName_.find("_mtl") != std::string::npos;
     bool is7 = modelName_.find("_7") != std::string::npos;
     if (is7) {
@@ -116,6 +109,16 @@ EmotiEffLibRes EmotiEffLibRecognizer::processScores(const xt::xarray<float>& sco
     }
     res.scores = scores;
     return res;
+}
+
+void EmotiEffLibRecognizer::checkBackend(const std::string& backend) {
+    auto backends = getAvailableBackends();
+    auto it = std::find(backends.begin(), backends.end(), backend);
+    if (it == backends.end()) {
+        throw std::runtime_error(
+            "This backend (" + backend +
+            ") is not supported. Please check your EmotiEffLib build or configuration.");
+    }
 }
 
 } // namespace EmotiEffLib

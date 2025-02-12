@@ -6,14 +6,16 @@
 #include <onnxruntime_cxx_api.h>
 
 namespace EmotiEffLib {
-class EmotiEffLibRecognizerOnnx : public EmotiEffLibRecognizer {
+class EmotiEffLibRecognizerOnnx final : public EmotiEffLibRecognizer {
 public:
-    EmotiEffLibRecognizerOnnx(const std::string& modelPath);
-    EmotiEffLibRecognizerOnnx(const std::string& dirWithModels, const std::string& modelName);
+    EmotiEffLibRecognizerOnnx(const std::string& fullPipelineModelPath);
+    EmotiEffLibRecognizerOnnx(const EmotiEffLibConfig& config);
     EmotiEffLibRes precictEmotions(const cv::Mat& faceImg, bool logits = true) override;
 
 private:
+    void initRecognizer(const std::string& modelPath) override;
     xt::xarray<float> preprocess(const cv::Mat& img) override;
+    void configParser(const EmotiEffLibConfig& config) override;
 
 private:
     std::vector<float> mean_;
