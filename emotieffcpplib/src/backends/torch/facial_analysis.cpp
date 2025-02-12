@@ -1,10 +1,6 @@
 #include "emotiefflib/backends/torch/facial_analysis.h"
 
-#include <filesystem>
-
 #include <xtensor/xadapt.hpp>
-
-namespace fs = std::filesystem;
 
 namespace {
 // Convert xt::xarray to torch::Tensor
@@ -67,7 +63,7 @@ EmotiEffLibRes EmotiEffLibRecognizerTorch::classifyEmotions(const xt::xarray<flo
     return processScores(scores, logits);
 }
 
-EmotiEffLibRes EmotiEffLibRecognizerTorch::precictEmotions(const cv::Mat& faceImg, bool logits) {
+EmotiEffLibRes EmotiEffLibRecognizerTorch::predictEmotions(const cv::Mat& faceImg, bool logits) {
     if (fullPipelineModelIdx_ == -1 && (featureExtractorIdx_ == -1 || classifierIdx_ == -1))
         throw std::runtime_error("predictEmotions method requires fillPipeline model or "
                                  "featureExtractor and classifier models");

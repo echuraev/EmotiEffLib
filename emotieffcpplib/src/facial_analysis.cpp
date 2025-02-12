@@ -45,6 +45,39 @@ EmotiEffLibRecognizer::createInstance(const EmotiEffLibConfig& config) {
     return std::make_unique<EmotiEffLibRecognizerOnnx>(config);
 }
 
+xt::xarray<float> EmotiEffLibRecognizer::extractFeatures(const std::vector<cv::Mat>& faceImgs) {
+    xt::xarray<float> result;
+    for (size_t i = 0; i < faceImgs.size(); ++i) {
+        auto features = extractFeatures(faceImgs[i]);
+        // We need such workaround for concatenating because of known issue in xtensor:
+        // https://github.com/xtensor-stack/xtensor/issues/2579
+        if (i == 0) {
+            result = xt::zeros<float>({faceImgs.size(), features.shape(1)});
+        }
+        xt::view(result, i, xt::all()) = xt::view(features, 0, xt::all());
+    }
+
+    return result;
+}
+
+EmotiEffLibRes EmotiEffLibRecognizer::predictEmotions(const std::vector<cv::Mat>& faceImgs,
+                                                      bool logits) {
+    EmotiEffLibRes result;
+    result.labels = {};
+    for (size_t i = 0; i < faceImgs.size(); ++i) {
+        auto res = predictEmotions(faceImgs[i], logits);
+        if (i == 0) {
+            result.labels = {};
+            result.scores = xt::zeros<float>({faceImgs.size(), res.scores.shape(1)});
+        }
+        result.labels.insert(result.labels.end(), res.labels.begin(), res.labels.end());
+        // We need such workaround for concatenating because of known issue in xtensor:
+        // https://github.com/xtensor-stack/xtensor/issues/2579
+        xt::view(result.scores, i, xt::all()) = xt::view(res.scores, 0, xt::all());
+    }
+    return result;
+}
+
 void EmotiEffLibRecognizer::initRecognizer(const std::string& modelPath) {
     // Do not change modelName if it was explicitly specified in the config
     if (modelName_.empty()) {
