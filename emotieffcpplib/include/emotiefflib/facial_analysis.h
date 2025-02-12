@@ -29,10 +29,10 @@ public:
     static std::unique_ptr<EmotiEffLibRecognizer>
     createInstance(const std::string& backend, const std::string& fullPipelineModelPath);
     static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const EmotiEffLibConfig& config);
-    // virtual xt::xarray<float> extractFeatures(const xt::xarray<float>& faceImg) = 0;
-    // virtual xt::xarray<float> extractFeatures(const std::vector<xt::xarray<float>>& faceImgs) =
-    // 0; virtual EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features,
-    //                                         bool logits = true) = 0;
+    virtual xt::xarray<float> extractFeatures(const cv::Mat& faceImg) = 0;
+    // virtual xt::xarray<float> extractFeatures(const std::vector<xt::xarray<float>>& faceImgs) = 0
+    virtual EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features,
+                                            bool logits = true) = 0;
     // virtual EmotiEffLibRes classifyEngagement(const xt::xarray<float>& features,
     //                                           int slidingWindowWidth = 128) = 0;
     virtual EmotiEffLibRes precictEmotions(const cv::Mat& faceImg, bool logits = true) = 0;

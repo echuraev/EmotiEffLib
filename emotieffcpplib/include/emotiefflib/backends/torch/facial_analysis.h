@@ -10,6 +10,8 @@ class EmotiEffLibRecognizerTorch final : public EmotiEffLibRecognizer {
 public:
     EmotiEffLibRecognizerTorch(const std::string& fullPipelineModelPath);
     EmotiEffLibRecognizerTorch(const EmotiEffLibConfig& config);
+    xt::xarray<float> extractFeatures(const cv::Mat& faceImg) override;
+    EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features, bool logits = true) override;
     EmotiEffLibRes precictEmotions(const cv::Mat& faceImg, bool logits = true) override;
 
 private:
