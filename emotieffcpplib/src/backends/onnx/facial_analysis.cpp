@@ -1,11 +1,7 @@
 #include "emotiefflib/backends/onnx/facial_analysis.h"
 
-#include <filesystem>
-
 #include <xtensor/xadapt.hpp>
 #include <xtensor/xio.hpp>
-
-namespace fs = std::filesystem;
 
 namespace {
 Ort::Value xarray2tensor(const xt::xarray<float>& xarray) {
@@ -98,7 +94,7 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::classifyEmotions(const xt::xarray<floa
     return processScores(scores, logits);
 }
 
-EmotiEffLibRes EmotiEffLibRecognizerOnnx::precictEmotions(const cv::Mat& faceImg, bool logits) {
+EmotiEffLibRes EmotiEffLibRecognizerOnnx::predictEmotions(const cv::Mat& faceImg, bool logits) {
     if (fullPipelineModelIdx_ == -1 && (featureExtractorIdx_ == -1 || classifierIdx_ == -1))
         throw std::runtime_error("predictEmotions method requires fillPipeline model or "
                                  "featureExtractor and classifier models");
