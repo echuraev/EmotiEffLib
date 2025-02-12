@@ -46,6 +46,27 @@ EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const EmotiEffLibConfig& 
     initRecognizer(config.featureExtractorPath);
 }
 
+xt::xarray<float> EmotiEffLibRecognizerTorch::extractFeatures(const cv::Mat& faceImg) {
+    if (featureExtractorIdx_ == -1)
+        throw std::runtime_error("Model for features extraction wasn't specified in the config!");
+    auto imgTensor = preprocess(faceImg);
+    auto input = xarray2tensor(imgTensor);
+    auto outputTensor = models_[featureExtractorIdx_].forward({input}).toTensor();
+    auto features = tensor2xarray(outputTensor);
+    return features;
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerTorch::classifyEmotions(const xt::xarray<float>& features,
+                                                            bool logits) {
+    if (classifierIdx_ == -1)
+        throw std::runtime_error(
+            "Model for emotions classification wasn't specified in the config!");
+    auto input = xarray2tensor(features);
+    auto classifierOutput = models_[classifierIdx_].forward({input}).toTensor();
+    auto scores = tensor2xarray(classifierOutput);
+    return processScores(scores, logits);
+}
+
 EmotiEffLibRes EmotiEffLibRecognizerTorch::precictEmotions(const cv::Mat& faceImg, bool logits) {
     if (fullPipelineModelIdx_ == -1 && (featureExtractorIdx_ == -1 || classifierIdx_ == -1))
         throw std::runtime_error("predictEmotions method requires fillPipeline model or "

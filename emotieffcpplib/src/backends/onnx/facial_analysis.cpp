@@ -75,42 +75,46 @@ EmotiEffLibRecognizerOnnx::EmotiEffLibRecognizerOnnx(const EmotiEffLibConfig& co
     initRecognizer(config.featureExtractorPath);
 }
 
+xt::xarray<float> EmotiEffLibRecognizerOnnx::extractFeatures(const cv::Mat& faceImg) {
+    if (featureExtractorIdx_ == -1)
+        throw std::runtime_error("Model for features extraction wasn't specified in the config!");
+    auto imgTensor = preprocess(faceImg);
+    std::vector<Ort::Value> inputTensors;
+    inputTensors.push_back(xarray2tensor(imgTensor));
+    auto outputTensors = modelRunWrapper(featureExtractorIdx_, inputTensors);
+    auto features = tensor2xarray(outputTensors[0]);
+    return features;
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerOnnx::classifyEmotions(const xt::xarray<float>& features,
+                                                           bool logits) {
+    if (classifierIdx_ == -1)
+        throw std::runtime_error(
+            "Model for emotions classification wasn't specified in the config!");
+    std::vector<Ort::Value> inputTensors;
+    inputTensors.push_back(xarray2tensor(features));
+    auto outputTensors = modelRunWrapper(classifierIdx_, inputTensors);
+    auto scores = tensor2xarray(outputTensors[0]);
+    return processScores(scores, logits);
+}
+
 EmotiEffLibRes EmotiEffLibRecognizerOnnx::precictEmotions(const cv::Mat& faceImg, bool logits) {
     if (fullPipelineModelIdx_ == -1 && (featureExtractorIdx_ == -1 || classifierIdx_ == -1))
         throw std::runtime_error("predictEmotions method requires fillPipeline model or "
                                  "featureExtractor and classifier models");
     auto imgTensor = preprocess(faceImg);
 
-    // Always in index 0 is the fullPipelineMode or featureExtractor model
-    // In this case doesn't matter which one is here.
-    auto& session = models_[0];
-    checkModelInputs(session);
-
     Ort::AllocatorWithDefaultOptions allocator;
 
-    auto input_name = session.GetInputNameAllocated(0, allocator);
-    std::vector<const char*> inputNames = {input_name.get()};
+    // Always in index 0 is the fullPipelineMode or featureExtractor model
+    // In this case doesn't matter which one is here.
     std::vector<Ort::Value> inputTensors;
     inputTensors.push_back(xarray2tensor(imgTensor));
-
-    auto outputName = session.GetOutputNameAllocated(0, allocator);
-    std::vector<const char*> outputNames = {outputName.get()};
-
-    // Run inference
-    auto outputTensors = session.Run(Ort::RunOptions{nullptr}, inputNames.data(),
-                                     inputTensors.data(), 1, outputNames.data(), 1);
+    auto outputTensors = modelRunWrapper(0, inputTensors);
 
     xt::xarray<float> scores;
     if (fullPipelineModelIdx_ == -1 && classifierIdx_ > -1) {
-        auto& classifier = models_[classifierIdx_];
-        checkModelInputs(classifier);
-        auto outputName = classifier.GetOutputNameAllocated(0, allocator);
-        std::vector<const char*> classifierOutputNames = {outputName.get()};
-
-        // Run inference
-        auto classifierOutputTensors =
-            classifier.Run(Ort::RunOptions{nullptr}, outputNames.data(), outputTensors.data(), 1,
-                           classifierOutputNames.data(), 1);
+        auto classifierOutputTensors = modelRunWrapper(classifierIdx_, outputTensors);
         scores = tensor2xarray(classifierOutputTensors[0]);
     } else {
         scores = tensor2xarray(outputTensors[0]);
@@ -193,5 +197,23 @@ void EmotiEffLibRecognizerOnnx::configParser(const EmotiEffLibConfig& config) {
         models_.push_back(std::move(model));
         classifierIdx_ = models_.size() - 1;
     }
+}
+
+std::vector<Ort::Value>
+EmotiEffLibRecognizerOnnx::modelRunWrapper(int modelIdx, const std::vector<Ort::Value>& inputs) {
+    auto& session = models_[modelIdx];
+    checkModelInputs(session);
+
+    Ort::AllocatorWithDefaultOptions allocator;
+
+    auto input_name = session.GetInputNameAllocated(0, allocator);
+    std::vector<const char*> inputNames = {input_name.get()};
+
+    auto outputName = session.GetOutputNameAllocated(0, allocator);
+    std::vector<const char*> outputNames = {outputName.get()};
+
+    // Run inference
+    return session.Run(Ort::RunOptions{nullptr}, inputNames.data(), inputs.data(), 1,
+                       outputNames.data(), 1);
 }
 } // namespace EmotiEffLib
