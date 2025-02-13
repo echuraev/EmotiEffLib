@@ -339,9 +339,12 @@ TEST_P(EmotiEffLibTests, OnVideoMultiPredictionOneModel) {
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
     auto result = fer->predictEmotions(facialImgs, true);
     auto score = xt::mean(result.scores, {0});
-    auto emotion = xt::argmax(score);
+    auto argmax = [](const xt::xarray<float>& score) {
+        return std::distance(score.begin(), std::max_element(score.begin(), score.end()));
+    };
+    auto emotion_idx = argmax(score);
 
-    EXPECT_EQ(fer->getEmotionClassById(emotion[0]), "Anger");
+    EXPECT_EQ(fer->getEmotionClassById(emotion_idx), "Anger");
 }
 
 std::string TestNameGenerator(const ::testing::TestParamInfo<EmotiEffLibTests::ParamType>& info) {
