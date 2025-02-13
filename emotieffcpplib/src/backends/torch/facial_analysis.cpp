@@ -32,6 +32,8 @@ xt::xarray<float> tensor2xarray(const torch::Tensor& tensor) {
 namespace EmotiEffLib {
 EmotiEffLibRecognizerTorch::EmotiEffLibRecognizerTorch(const std::string& fullPipelineModel) {
     torch::jit::script::Module model = torch::jit::load(fullPipelineModel);
+    model.to(torch::Device(torch::kCPU));
+    model.eval();
     models_.push_back(model);
     fullPipelineModelIdx_ = 0;
     initRecognizer(fullPipelineModel);
@@ -138,11 +140,15 @@ void EmotiEffLibRecognizerTorch::configParser(const EmotiEffLibConfig& config) {
             "featureExtractorPath MUST be specified in the EmotiEffLibConfig.");
     } else {
         torch::jit::script::Module model = torch::jit::load(config.featureExtractorPath);
+        model.to(torch::Device(torch::kCPU));
+        model.eval();
         models_.push_back(model);
         featureExtractorIdx_ = models_.size() - 1;
     }
     if (!config.classifierPath.empty()) {
         torch::jit::script::Module model = torch::jit::load(config.classifierPath);
+        model.to(torch::Device(torch::kCPU));
+        model.eval();
         models_.push_back(model);
         classifierIdx_ = models_.size() - 1;
     }

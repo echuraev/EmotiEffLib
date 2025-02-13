@@ -62,7 +62,7 @@ def trace_model(
     input_shape = (1, 3, img_size, img_size)
     model_example = torch.rand(*input_shape)
     model = torch.load(torch_model, map_location=torch.device("cpu"))
-    traced_script_module = torch.jit.trace(model, model_example)
+    traced_script_module = torch.jit.script(model, model_example)
     traced_script_module.save(model_out)
     if isinstance(model.classifier, torch.nn.Sequential):
         classifier_shape = (1, model.classifier[0].in_features)
@@ -70,9 +70,9 @@ def trace_model(
         classifier_shape = (1, model.classifier.in_features)
     features_extractor, classifier = split_torch_model(model)
     classifier_example = torch.rand(*classifier_shape)
-    traced_script_features_extractor = torch.jit.trace(features_extractor, model_example)
+    traced_script_features_extractor = torch.jit.script(features_extractor, model_example)
     traced_script_features_extractor.save(features_extractor_out)
-    traced_script_classifier = torch.jit.trace(classifier, classifier_example)
+    traced_script_classifier = torch.jit.script(classifier, classifier_example)
     traced_script_classifier.save(classifier_out)
 
 

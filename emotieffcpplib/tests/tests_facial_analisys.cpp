@@ -15,8 +15,7 @@ namespace fs = std::filesystem;
 namespace {
 std::vector<std::string> getOneImageExpEmotions(const std::string& backend,
                                                 const std::string& modelName) {
-    if (modelName == "enet_b0_8_va_mtl" ||
-        (backend == "onnx" && modelName == "enet_b0_8_best_afew")) {
+    if (modelName == "enet_b0_8_va_mtl" || modelName == "enet_b0_8_best_afew") {
         return {"Anger", "Happiness", "Happiness"};
     }
     return {"Anger", "Happiness", "Fear"};
@@ -385,6 +384,7 @@ TEST_P(EmotiEffLibOnlyModelTests, OneImageFeatures) {
         auto featuresOnnx = ferOnnx->extractFeatures(face);
         auto featuresTorch = ferTorch->extractFeatures(face);
         EXPECT_EQ(featuresOnnx.shape(), featuresTorch.shape());
+        ASSERT_TRUE(xt::allclose(featuresOnnx, featuresTorch, 1e-2, 1e-2));
     }
 }
 
@@ -411,6 +411,7 @@ TEST_P(EmotiEffLibOnlyModelTests, OneImageMultiFeatures) {
     auto featuresTorch = ferTorch->extractFeatures(facialImages);
     EXPECT_EQ(featuresOnnx.shape()[0], 3);
     EXPECT_EQ(featuresOnnx.shape(), featuresTorch.shape());
+    ASSERT_TRUE(xt::allclose(featuresOnnx, featuresTorch, 1e-2, 1e-2));
 }
 
 std::string OnlyModelTestNameGenerator(
