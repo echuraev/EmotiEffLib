@@ -86,6 +86,13 @@ jobs:
           # Workaround for Linux build in CI
           cp -rf onnxruntime/lib onnxruntime/lib64
 
+      - name: Download and unpack test data
+        run: |
+          cd tests/
+          ./download_test_data.sh
+          tar -xzf data.tar.gz
+          cd ..
+
       - name: Build EmotiEffCppLib
         run: |
           mkdir build
