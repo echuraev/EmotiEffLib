@@ -4,20 +4,20 @@
 #include <xtensor/xio.hpp>
 
 namespace {
-Ort::Value xarray2tensor(const xt::xarray<float>& xarray) {
+// Important! Looks like Ort::Value doesn't contain the own handler in it.
+// Instead, it points to the memory allocated by other objects, e.g. std::vector or xt::xarray.
+// We have to make sure that during operation with Ort::Value the initial object is in valid state.
+Ort::Value xarray2tensor(xt::xarray<float>& xarray) {
     auto xtensor = xt::eval(xarray);
     // Extract shape
     std::vector<int64_t> shape(xtensor.shape().begin(), xtensor.shape().end());
-
-    // Create new buffer
-    std::vector<float> buffer(xtensor.begin(), xtensor.end());
 
     // Create ONNX Runtime memory info (CPU)
     Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 
     // Create ONNX Runtime tensor
     Ort::Value onnx_tensor = Ort::Value::CreateTensor<float>(
-        memory_info, buffer.data(), buffer.size(), shape.data(), shape.size());
+        memory_info, xarray.data(), xarray.size(), shape.data(), shape.size());
 
     // Verify tensor is valid
     if (!onnx_tensor.IsTensor()) {
@@ -87,8 +87,9 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::classifyEmotions(const xt::xarray<floa
     if (classifierIdx_ == -1)
         throw std::runtime_error(
             "Model for emotions classification wasn't specified in the config!");
+    xt::xarray<float> featuresHandler = features;
     std::vector<Ort::Value> inputTensors;
-    inputTensors.push_back(xarray2tensor(features));
+    inputTensors.push_back(xarray2tensor(featuresHandler));
     auto outputTensors = modelRunWrapper(classifierIdx_, inputTensors);
     auto scores = tensor2xarray(outputTensors[0]);
     return processScores(scores, logits);
@@ -99,8 +100,6 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::predictEmotions(const cv::Mat& faceImg
         throw std::runtime_error("predictEmotions method requires fillPipeline model or "
                                  "featureExtractor and classifier models");
     auto imgTensor = preprocess(faceImg);
-
-    Ort::AllocatorWithDefaultOptions allocator;
 
     // Always in index 0 is the fullPipelineMode or featureExtractor model
     // In this case doesn't matter which one is here.
@@ -200,12 +199,10 @@ EmotiEffLibRecognizerOnnx::modelRunWrapper(int modelIdx, const std::vector<Ort::
     auto& session = models_[modelIdx];
     checkModelInputs(session);
 
-    Ort::AllocatorWithDefaultOptions allocator;
-
-    auto input_name = session.GetInputNameAllocated(0, allocator);
+    auto input_name = session.GetInputNameAllocated(0, allocator_);
     std::vector<const char*> inputNames = {input_name.get()};
 
-    auto outputName = session.GetOutputNameAllocated(0, allocator);
+    auto outputName = session.GetOutputNameAllocated(0, allocator_);
     std::vector<const char*> outputNames = {outputName.get()};
 
     // Run inference

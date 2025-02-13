@@ -24,6 +24,7 @@ private:
     std::vector<float> mean_;
     std::vector<float> std_;
     Ort::Env env_ = {ORT_LOGGING_LEVEL_WARNING, "EmotiEffLib"};
+    Ort::AllocatorWithDefaultOptions allocator_;
     std::vector<Ort::Session> models_;
 };
 } // namespace EmotiEffLib
