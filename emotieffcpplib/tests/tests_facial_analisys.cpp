@@ -7,6 +7,7 @@
 
 #include <xtensor/xarray.hpp>
 #include <xtensor/xio.hpp>
+#include <xtensor/xmath.hpp>
 #include <xtensor/xsort.hpp>
 
 namespace fs = std::filesystem;
@@ -26,7 +27,9 @@ std::vector<cv::Mat> getOneImageFaces() {
     fs::path imagePath(pyTestDir);
     imagePath = imagePath / "test_images" / "20180720_174416.jpg";
     cv::Mat frame = cv::imread(imagePath);
-    return recognizeFaces(frame);
+    cv::Mat frameRgb;
+    cv::cvtColor(frame, frameRgb, cv::COLOR_BGR2RGB);
+    return recognizeFaces(frameRgb);
 }
 } // namespace
 
@@ -241,6 +244,105 @@ TEST_P(EmotiEffLibTests, OneImageMultiClassification) {
 
     ASSERT_TRUE(AreVectorsEqual(result.labels, scorePrediction));
     ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend, modelName)));
+}
+
+TEST_P(EmotiEffLibTests, AffectNetPredictionOneModel) {
+    const int filesLimit = 100;
+    auto& [backend, modelName] = GetParam();
+    std::string pyTestDir = getPathToPythonTestDir();
+    fs::path inputsDir(pyTestDir);
+    inputsDir = inputsDir / "data" / "AffectNet_val";
+    std::vector<std::string> inputFiles, inputLabels;
+    for (const auto& labelEntry : fs::directory_iterator(inputsDir)) {
+        const auto& labelPath = labelEntry.path();
+        auto label = labelPath.filename();
+
+        // Skip hidden files and non-directories
+        if (label.string().starts_with(".") || !fs::is_directory(labelPath)) {
+            continue;
+        }
+
+        size_t count = 0;
+        for (const auto& img_entry : fs::directory_iterator(labelPath)) {
+            if (count >= filesLimit) {
+                break;
+            }
+
+            const auto& img_path = img_entry.path();
+            if (img_path.filename().string().starts_with(".")) {
+                continue;
+            }
+
+            inputFiles.push_back(img_path.string());
+            inputLabels.push_back(label.string());
+            ++count;
+        }
+    }
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
+    if (backend == "torch") {
+        modelPath /= modelName + ".pt";
+    } else {
+        modelPath /= modelName + ".onnx";
+    }
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
+
+    std::vector<std::string> emotions;
+    for (auto& img : inputFiles) {
+        cv::Mat frame = cv::imread(img);
+        cv::Mat frameRgb;
+        cv::cvtColor(frame, frameRgb, cv::COLOR_BGR2RGB);
+
+        auto res = fer->predictEmotions(frameRgb, true);
+        emotions.push_back(res.labels[0]);
+    }
+
+    ASSERT_FALSE(emotions.empty());
+    ASSERT_EQ(emotions.size(), inputLabels.size());
+    size_t correct = std::count_if(emotions.begin(), emotions.end(),
+                                   [&inputLabels, i = 0](const std::string& pred) mutable {
+                                       return pred == inputLabels[i++];
+                                   });
+    float acc = static_cast<float>(correct) / emotions.size();
+
+    ASSERT_TRUE(acc > 0.55);
+}
+
+TEST_P(EmotiEffLibTests, OnVideoMultiPredictionOneModel) {
+    auto& [backend, modelName] = GetParam();
+    std::string pyTestDir = getPathToPythonTestDir();
+    fs::path videoPath(pyTestDir);
+    videoPath = videoPath / "data" / "video_samples" / "emotions" / "Angry" / "Angry.mp4";
+
+    cv::VideoCapture cap(videoPath);
+    ASSERT_TRUE(cap.isOpened()) << "Error: Could not open video file!";
+
+    std::vector<cv::Mat> facialImgs;
+    cv::Mat frame;
+
+    while (cap.read(frame)) { // Read frames until end
+        cv::Mat frameRgb;
+        cv::cvtColor(frame, frameRgb, cv::COLOR_BGR2RGB);
+        auto faces = recognizeFaces(frameRgb);
+        facialImgs.insert(facialImgs.end(), faces.begin(), faces.end());
+    }
+
+    cap.release();
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
+    if (backend == "torch") {
+        modelPath /= modelName + ".pt";
+    } else {
+        modelPath /= modelName + ".onnx";
+    }
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
+    auto result = fer->predictEmotions(facialImgs, true);
+    auto score = xt::mean(result.scores, {0});
+    auto emotion = xt::argmax(score);
+
+    EXPECT_EQ(fer->getEmotionClassById(emotion[0]), "Anger");
 }
 
 std::string TestNameGenerator(const ::testing::TestParamInfo<EmotiEffLibTests::ParamType>& info) {
