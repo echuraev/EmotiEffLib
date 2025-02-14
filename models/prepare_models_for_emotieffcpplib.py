@@ -17,6 +17,11 @@ try:
 except ImportError:
     pass
 
+from engagement_classification.engagement_single_attention_converter import (
+    engagementToOnnxConverter,
+    engagementToTorchConverter,
+)
+
 from emotiefflib.facial_analysis import get_model_list
 
 # pylint: enable=duplicate-code
@@ -76,16 +81,13 @@ def trace_model(
     traced_script_classifier.save(classifier_out)
 
 
-def prepare_torch_models() -> None:
+def prepare_torch_models(output_dir: str) -> None:
     """
     Trace torch models from EmotiEffLib.
     """
     models_dir = os.path.join(FILE_DIR, "affectnet_emotions")
     # model_files = [f for f in os.listdir(models_dir) if f.endswith(".pt")]
     model_files = [f + ".pt" for f in get_model_list()]
-    output_dir = os.path.join(FILE_DIR, "emotieffcpplib_prepared_models")
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
 
     for mf in model_files:
         inp = os.path.join(models_dir, mf)
@@ -191,7 +193,7 @@ def split_onnx_model(
     onnx.save(classifier, classifier_out)
 
 
-def prepare_onnx_models() -> None:
+def prepare_onnx_models(output_dir: str) -> None:
     """
     Prepare ONNX models from EmotiEffLib.
     """
@@ -218,15 +220,22 @@ def prepare_onnx_models() -> None:
 
 if __name__ == "__main__":
     # pylint: disable=unused-import, import-outside-toplevel, redefined-outer-name, ungrouped-imports
-    try:
-        import torch
-
-        prepare_torch_models()
-    except ImportError:
-        pass
+    output_dir = os.path.join(FILE_DIR, "emotieffcpplib_prepared_models")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     try:
         import onnx
 
-        prepare_onnx_models()
+        prepare_onnx_models(output_dir)
     except ImportError:
         pass
+    try:
+        import torch
+
+        prepare_torch_models(output_dir)
+    except ImportError:
+        pass
+    engagement_onnx_name = os.path.join(output_dir, "engagement_classifier_2560_128.onnx")
+    engagement_torch_name = os.path.join(output_dir, "engagement_classifier_2560_128.pt")
+    onnx_engagement_model = engagementToOnnxConverter(engagement_onnx_name)
+    engagementToTorchConverter(onnx_engagement_model, engagement_torch_name)
