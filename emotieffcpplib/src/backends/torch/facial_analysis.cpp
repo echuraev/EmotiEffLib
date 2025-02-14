@@ -62,7 +62,26 @@ EmotiEffLibRes EmotiEffLibRecognizerTorch::classifyEmotions(const xt::xarray<flo
     auto input = xarray2tensor(features);
     auto classifierOutput = models_[classifierIdx_].forward({input}).toTensor();
     auto scores = tensor2xarray(classifierOutput);
-    return processScores(scores, logits);
+    return processEmotionScores(scores, logits);
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerTorch::classifyEngagement(const xt::xarray<float>& features) {
+    if (engagementClassifierIdx_ == -1)
+        throw std::runtime_error(
+            "Model for engagement classification wasn't specified in the config!");
+    if (features.shape(0) < engagementSlidingWindowSize_)
+        throw std::runtime_error(
+            "Not enough features to predict engagement. Sliding window width: " +
+            std::to_string(engagementSlidingWindowSize_) +
+            ", but number of features in a sequence: " + std::to_string(features.shape(0)));
+
+    auto featuresSlices = engagementFeaturesPreprocess(features);
+
+    auto input = xarray2tensor(featuresSlices);
+    auto engClassifierOutput = models_[engagementClassifierIdx_].forward({input}).toTensor();
+    auto scores = tensor2xarray(engClassifierOutput);
+
+    return processEngagementScores(scores);
 }
 
 EmotiEffLibRes EmotiEffLibRecognizerTorch::predictEmotions(const cv::Mat& faceImg, bool logits) {
@@ -71,9 +90,8 @@ EmotiEffLibRes EmotiEffLibRecognizerTorch::predictEmotions(const cv::Mat& faceIm
                                  "featureExtractor and classifier models");
     auto imgTensor = preprocess(faceImg);
     auto input = xarray2tensor(imgTensor);
-    // Always in index 0 is the fullPipelineMode or featureExtractor model
-    // In this case doesn't matter which one is here.
-    auto outputTensor = models_[0].forward({input}).toTensor();
+    int extractorIdx = (fullPipelineModelIdx_ > -1) ? fullPipelineModelIdx_ : featureExtractorIdx_;
+    auto outputTensor = models_[extractorIdx].forward({input}).toTensor();
     xt::xarray<float> scores;
     if (fullPipelineModelIdx_ == -1 && classifierIdx_ > -1) {
         auto classifierOutput = models_[classifierIdx_].forward({outputTensor}).toTensor();
@@ -82,7 +100,21 @@ EmotiEffLibRes EmotiEffLibRecognizerTorch::predictEmotions(const cv::Mat& faceIm
         scores = tensor2xarray(outputTensor);
     }
 
-    return processScores(scores, logits);
+    return processEmotionScores(scores, logits);
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerTorch::predictEngagement(const std::vector<cv::Mat>& faceImgs) {
+    if (featureExtractorIdx_ == -1 || engagementClassifierIdx_ == -1)
+        throw std::runtime_error(
+            "predictEngagement method requires featureExtractor and enagement classifier models");
+    if (faceImgs.size() < engagementSlidingWindowSize_)
+        throw std::runtime_error(
+            "Not enough frames to predict engagement. Sliding window width: " +
+            std::to_string(engagementSlidingWindowSize_) +
+            ", but number of frames in video: " + std::to_string(faceImgs.size()));
+    auto features = EmotiEffLibRecognizer::extractFeatures(faceImgs);
+
+    return classifyEngagement(features);
 }
 
 void EmotiEffLibRecognizerTorch::initRecognizer(const std::string& modelPath) {
@@ -151,6 +183,13 @@ void EmotiEffLibRecognizerTorch::configParser(const EmotiEffLibConfig& config) {
         model.eval();
         models_.push_back(model);
         classifierIdx_ = models_.size() - 1;
+    }
+    if (!config.engagementClassifierPath.empty()) {
+        torch::jit::script::Module model = torch::jit::load(config.engagementClassifierPath);
+        model.to(torch::Device(torch::kCPU));
+        model.eval();
+        models_.push_back(model);
+        engagementClassifierIdx_ = models_.size() - 1;
     }
 }
 } // namespace EmotiEffLib

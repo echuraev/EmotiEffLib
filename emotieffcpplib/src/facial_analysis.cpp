@@ -107,7 +107,8 @@ void EmotiEffLibRecognizer::initRecognizer(const std::string& modelPath) {
     }
 }
 
-EmotiEffLibRes EmotiEffLibRecognizer::processScores(const xt::xarray<float>& score, bool logits) {
+EmotiEffLibRes EmotiEffLibRecognizer::processEmotionScores(const xt::xarray<float>& score,
+                                                           bool logits) {
     xt::xarray<float> x;
     xt::xarray<float> scores = score;
     // Select relevant part of the scores based on is_mtl
@@ -142,6 +143,36 @@ EmotiEffLibRes EmotiEffLibRecognizer::processScores(const xt::xarray<float>& sco
     }
     res.scores = scores;
     return res;
+}
+
+EmotiEffLibRes EmotiEffLibRecognizer::processEngagementScores(const xt::xarray<float>& score) {
+    // Compute predictions
+    auto preds = xt::argmax(score, 1);
+
+    // Convert predictions to engagement class names
+    EmotiEffLibRes res;
+    for (auto pred : preds) {
+        res.labels.push_back(idxToEngagementClass_[pred]);
+    }
+    res.scores = score;
+    return res;
+}
+
+xt::xarray<float>
+EmotiEffLibRecognizer::engagementFeaturesPreprocess(const xt::xarray<float> features) {
+    int maxIters = features.shape(0) - engagementSlidingWindowSize_;
+    xt::xarray<float> features_slices;
+    for (int i = 0; i < maxIters; ++i) {
+        if (i == 0) {
+            features_slices = xt::zeros<float>({static_cast<size_t>(maxIters),
+                                                static_cast<size_t>(engagementSlidingWindowSize_),
+                                                features.shape(1) * 2});
+        }
+        auto x = xt::view(features, xt::range(i, i + engagementSlidingWindowSize_), xt::all());
+        auto mean_x = xt::repeat(xt::expand_dims(xt::stddev(x, {0}), 0), x.shape(0), 0);
+        xt::view(features_slices, i, xt::all()) = xt::concatenate(xt::xtuple(mean_x, x), 1);
+    }
+    return features_slices;
 }
 
 void EmotiEffLibRecognizer::checkBackend(const std::string& backend) {

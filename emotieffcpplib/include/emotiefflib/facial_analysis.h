@@ -20,34 +20,38 @@ struct EmotiEffLibConfig {
     std::string backend;
     std::string featureExtractorPath;
     std::string classifierPath;
+    std::string engagementClassifierPath;
     std::string modelName = "";
 };
 
 class EmotiEffLibRecognizer {
 public:
     virtual ~EmotiEffLibRecognizer() = default;
+
     static std::unique_ptr<EmotiEffLibRecognizer>
     createInstance(const std::string& backend, const std::string& fullPipelineModelPath);
     static std::unique_ptr<EmotiEffLibRecognizer> createInstance(const EmotiEffLibConfig& config);
+
     inline std::string getEmotionClassById(int idx) { return idxToEmotionClass_[idx]; }
     inline std::string getEngagementClassById(int idx) { return idxToEngagementClass_[idx]; }
+
     virtual xt::xarray<float> extractFeatures(const cv::Mat& faceImg) = 0;
     virtual xt::xarray<float> extractFeatures(const std::vector<cv::Mat>& faceImgs);
     virtual EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features,
                                             bool logits = true) = 0;
-    // virtual EmotiEffLibRes classifyEngagement(const xt::xarray<float>& features,
-    //                                           int slidingWindowWidth = 128) = 0;
+    virtual EmotiEffLibRes classifyEngagement(const xt::xarray<float>& features) = 0;
     virtual EmotiEffLibRes predictEmotions(const cv::Mat& faceImg, bool logits = true) = 0;
     virtual EmotiEffLibRes predictEmotions(const std::vector<cv::Mat>& faceImgs,
                                            bool logits = true);
-    // virtual EmotiEffLibRes predictEngagement(const std::vector<cv::Mat>& faceImgs,
-    //                                          int slidingWindowWidth = 128) = 0;
+    virtual EmotiEffLibRes predictEngagement(const std::vector<cv::Mat>& faceImgs) = 0;
 
 protected:
     virtual void initRecognizer(const std::string& modelPath);
-    EmotiEffLibRes processScores(const xt::xarray<float>& scores, bool logits);
+    EmotiEffLibRes processEmotionScores(const xt::xarray<float>& scores, bool logits);
+    EmotiEffLibRes processEngagementScores(const xt::xarray<float>& scores);
     virtual void configParser(const EmotiEffLibConfig& config) = 0;
     virtual xt::xarray<float> preprocess(const cv::Mat& img) = 0;
+    xt::xarray<float> engagementFeaturesPreprocess(const xt::xarray<float> features);
 
 private:
     static void checkBackend(const std::string& backend);
@@ -57,6 +61,8 @@ protected:
     int fullPipelineModelIdx_ = -1;
     int featureExtractorIdx_ = -1;
     int classifierIdx_ = -1;
+    int engagementClassifierIdx_ = -1;
+    const int engagementSlidingWindowSize_ = 128;
     std::vector<std::string> idxToEngagementClass_ = {"Distracted", "Engaged"};
     std::vector<std::string> idxToEmotionClass_;
     bool isMtl_;

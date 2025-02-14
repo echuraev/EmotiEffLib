@@ -308,7 +308,7 @@ TEST_P(EmotiEffLibTests, AffectNetPredictionOneModel) {
     ASSERT_TRUE(acc > 0.55);
 }
 
-TEST_P(EmotiEffLibTests, OnVideoMultiPredictionOneModel) {
+TEST_P(EmotiEffLibTests, OnVideoOneModel) {
     auto& [backend, modelName] = GetParam();
     std::string pyTestDir = getPathToPythonTestDir();
     fs::path videoPath(pyTestDir);
@@ -345,6 +345,152 @@ TEST_P(EmotiEffLibTests, OnVideoMultiPredictionOneModel) {
     auto emotion_idx = argmax(score);
 
     EXPECT_EQ(fer->getEmotionClassById(emotion_idx), "Anger");
+}
+
+TEST_P(EmotiEffLibTests, OnVideoEngagement) {
+    auto& [backend, modelName] = GetParam();
+    if (backend == "torch" || modelName.find("_b2_") != std::string::npos) {
+        GTEST_SKIP() << "Skipping test because of unsupported model.";
+    }
+    std::string pyTestDir = getPathToPythonTestDir();
+    fs::path videoPath(pyTestDir);
+    videoPath = videoPath / "data" / "video_samples" / "engagement" / "engaged" / "1_video1.mp4";
+
+    cv::VideoCapture cap(videoPath);
+    ASSERT_TRUE(cap.isOpened()) << "Error: Could not open video file!";
+
+    std::vector<cv::Mat> facialImgs;
+    cv::Mat frame;
+
+    while (cap.read(frame)) { // Read frames until end
+        cv::Mat frameRgb;
+        cv::cvtColor(frame, frameRgb, cv::COLOR_BGR2RGB);
+        auto faces = recognizeFaces(frameRgb);
+        facialImgs.insert(facialImgs.end(), faces.begin(), faces.end());
+    }
+
+    cap.release();
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
+    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
+    std::string engagementClassifierPath = modelPath / ("engagement_classifier_2560_128" + ext);
+    EmotiEffLib::EmotiEffLibConfig config = {
+        .backend = backend,
+        .featureExtractorPath = featureExtractorPath,
+        .engagementClassifierPath = engagementClassifierPath,
+        .modelName = modelName,
+    };
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+    auto result = fer->predictEngagement(facialImgs);
+    auto score = xt::mean(result.scores, {0});
+    auto argmax = [](const xt::xarray<float>& score) {
+        return std::distance(score.begin(), std::max_element(score.begin(), score.end()));
+    };
+    auto engagement_idx = argmax(score);
+
+    EXPECT_EQ(fer->getEngagementClassById(engagement_idx), "Engaged");
+}
+
+TEST_P(EmotiEffLibTests, OnVideoDistraction) {
+    auto& [backend, modelName] = GetParam();
+    if (backend == "torch" || modelName.find("_b2_") != std::string::npos) {
+        GTEST_SKIP() << "Skipping test because of unsupported model.";
+    }
+    std::string pyTestDir = getPathToPythonTestDir();
+    fs::path videoPath(pyTestDir);
+    videoPath = videoPath / "data" / "video_samples" / "engagement" / "distracted" / "0_video1.mp4";
+
+    cv::VideoCapture cap(videoPath);
+    ASSERT_TRUE(cap.isOpened()) << "Error: Could not open video file!";
+
+    std::vector<cv::Mat> facialImgs;
+    cv::Mat frame;
+
+    while (cap.read(frame)) { // Read frames until end
+        cv::Mat frameRgb;
+        cv::cvtColor(frame, frameRgb, cv::COLOR_BGR2RGB);
+        auto faces = recognizeFaces(frameRgb);
+        facialImgs.insert(facialImgs.end(), faces.begin(), faces.end());
+    }
+
+    cap.release();
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
+    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
+    std::string engagementClassifierPath = modelPath / ("engagement_classifier_2560_128" + ext);
+    EmotiEffLib::EmotiEffLibConfig config = {
+        .backend = backend,
+        .featureExtractorPath = featureExtractorPath,
+        .engagementClassifierPath = engagementClassifierPath,
+        .modelName = modelName,
+    };
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+    auto features = fer->extractFeatures(facialImgs);
+    auto result = fer->classifyEngagement(features);
+    auto score = xt::mean(result.scores, {0});
+    auto argmax = [](const xt::xarray<float>& score) {
+        return std::distance(score.begin(), std::max_element(score.begin(), score.end()));
+    };
+    auto engagement_idx = argmax(score);
+
+    EXPECT_EQ(fer->getEngagementClassById(engagement_idx), "Distracted");
+}
+
+TEST_P(EmotiEffLibTests, OnVideoEmotionAndEngagement) {
+    auto& [backend, modelName] = GetParam();
+    if (backend == "torch" || modelName.find("_b2_") != std::string::npos) {
+        GTEST_SKIP() << "Skipping test because of unsupported model.";
+    }
+    std::string pyTestDir = getPathToPythonTestDir();
+    fs::path videoPath(pyTestDir);
+    videoPath = videoPath / "data" / "video_samples" / "engagement" / "engaged" / "1_video1.mp4";
+
+    cv::VideoCapture cap(videoPath);
+    ASSERT_TRUE(cap.isOpened()) << "Error: Could not open video file!";
+
+    std::vector<cv::Mat> facialImgs;
+    cv::Mat frame;
+
+    while (cap.read(frame)) { // Read frames until end
+        cv::Mat frameRgb;
+        cv::cvtColor(frame, frameRgb, cv::COLOR_BGR2RGB);
+        auto faces = recognizeFaces(frameRgb);
+        facialImgs.insert(facialImgs.end(), faces.begin(), faces.end());
+    }
+
+    cap.release();
+
+    fs::path modelPath(getEmotiEffLibRootDir());
+    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
+    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
+    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
+    std::string engagementClassifierPath = modelPath / ("engagement_classifier_2560_128" + ext);
+    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    EmotiEffLib::EmotiEffLibConfig config = {
+        .backend = backend,
+        .featureExtractorPath = featureExtractorPath,
+        .classifierPath = classifierPath,
+        .engagementClassifierPath = engagementClassifierPath,
+        .modelName = modelName,
+    };
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
+    auto features = fer->extractFeatures(facialImgs);
+    auto emo_result = fer->classifyEmotions(features, true);
+    auto eng_result = fer->classifyEngagement(features);
+    auto emo_score = xt::mean(emo_result.scores, {0});
+    auto eng_score = xt::mean(eng_result.scores, {0});
+    auto argmax = [](const xt::xarray<float>& score) {
+        return std::distance(score.begin(), std::max_element(score.begin(), score.end()));
+    };
+    auto emotion_idx = argmax(emo_score);
+    auto engagement_idx = argmax(eng_score);
+
+    EXPECT_EQ(fer->getEmotionClassById(emotion_idx), "Sadness");
+    EXPECT_EQ(fer->getEngagementClassById(engagement_idx), "Engaged");
 }
 
 std::string TestNameGenerator(const ::testing::TestParamInfo<EmotiEffLibTests::ParamType>& info) {

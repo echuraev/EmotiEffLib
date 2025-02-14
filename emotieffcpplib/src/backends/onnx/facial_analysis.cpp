@@ -2,6 +2,7 @@
 
 #include <xtensor/xadapt.hpp>
 #include <xtensor/xio.hpp>
+#include <xtensor/xview.hpp>
 
 namespace {
 // Important! Looks like Ort::Value doesn't contain the own handler in it.
@@ -92,7 +93,26 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::classifyEmotions(const xt::xarray<floa
     inputTensors.push_back(xarray2tensor(featuresHandler));
     auto outputTensors = modelRunWrapper(classifierIdx_, inputTensors);
     auto scores = tensor2xarray(outputTensors[0]);
-    return processScores(scores, logits);
+    return processEmotionScores(scores, logits);
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerOnnx::classifyEngagement(const xt::xarray<float>& features) {
+    if (engagementClassifierIdx_ == -1)
+        throw std::runtime_error(
+            "Model for engagement classification wasn't specified in the config!");
+    if (features.shape(0) < engagementSlidingWindowSize_)
+        throw std::runtime_error(
+            "Not enough features to predict engagement. Sliding window width: " +
+            std::to_string(engagementSlidingWindowSize_) +
+            ", but number of features in a sequence: " + std::to_string(features.shape(0)));
+
+    auto featuresSlices = engagementFeaturesPreprocess(features);
+
+    std::vector<Ort::Value> inputTensors;
+    inputTensors.push_back(xarray2tensor(featuresSlices));
+    auto engClassifierOutput = modelRunWrapper(engagementClassifierIdx_, inputTensors);
+    auto scores = tensor2xarray(engClassifierOutput[0]);
+    return processEngagementScores(scores);
 }
 
 EmotiEffLibRes EmotiEffLibRecognizerOnnx::predictEmotions(const cv::Mat& faceImg, bool logits) {
@@ -101,11 +121,10 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::predictEmotions(const cv::Mat& faceImg
                                  "featureExtractor and classifier models");
     auto imgTensor = preprocess(faceImg);
 
-    // Always in index 0 is the fullPipelineMode or featureExtractor model
-    // In this case doesn't matter which one is here.
+    int extractorIdx = (fullPipelineModelIdx_ > -1) ? fullPipelineModelIdx_ : featureExtractorIdx_;
     std::vector<Ort::Value> inputTensors;
     inputTensors.push_back(xarray2tensor(imgTensor));
-    auto outputTensors = modelRunWrapper(0, inputTensors);
+    auto outputTensors = modelRunWrapper(extractorIdx, inputTensors);
 
     xt::xarray<float> scores;
     if (fullPipelineModelIdx_ == -1 && classifierIdx_ > -1) {
@@ -115,7 +134,21 @@ EmotiEffLibRes EmotiEffLibRecognizerOnnx::predictEmotions(const cv::Mat& faceImg
         scores = tensor2xarray(outputTensors[0]);
     }
 
-    return processScores(scores, logits);
+    return processEmotionScores(scores, logits);
+}
+
+EmotiEffLibRes EmotiEffLibRecognizerOnnx::predictEngagement(const std::vector<cv::Mat>& faceImgs) {
+    if (featureExtractorIdx_ == -1 || engagementClassifierIdx_ == -1)
+        throw std::runtime_error(
+            "predictEngagement method requires featureExtractor and enagement classifier models");
+    if (faceImgs.size() < engagementSlidingWindowSize_)
+        throw std::runtime_error(
+            "Not enough frames to predict engagement. Sliding window width: " +
+            std::to_string(engagementSlidingWindowSize_) +
+            ", but number of frames in video: " + std::to_string(faceImgs.size()));
+    auto features = EmotiEffLibRecognizer::extractFeatures(faceImgs);
+
+    return classifyEngagement(features);
 }
 
 void EmotiEffLibRecognizerOnnx::initRecognizer(const std::string& modelPath) {
@@ -191,6 +224,11 @@ void EmotiEffLibRecognizerOnnx::configParser(const EmotiEffLibConfig& config) {
         Ort::Session model(env_, config.classifierPath.c_str(), session_options);
         models_.push_back(std::move(model));
         classifierIdx_ = models_.size() - 1;
+    }
+    if (!config.engagementClassifierPath.empty()) {
+        Ort::Session model(env_, config.engagementClassifierPath.c_str(), session_options);
+        models_.push_back(std::move(model));
+        engagementClassifierIdx_ = models_.size() - 1;
     }
 }
 
