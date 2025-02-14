@@ -10,9 +10,12 @@ class EmotiEffLibRecognizerOnnx final : public EmotiEffLibRecognizer {
 public:
     EmotiEffLibRecognizerOnnx(const std::string& fullPipelineModelPath);
     EmotiEffLibRecognizerOnnx(const EmotiEffLibConfig& config);
+
     xt::xarray<float> extractFeatures(const cv::Mat& faceImg) override;
     EmotiEffLibRes classifyEmotions(const xt::xarray<float>& features, bool logits = true) override;
+    EmotiEffLibRes classifyEngagement(const xt::xarray<float>& features) override;
     EmotiEffLibRes predictEmotions(const cv::Mat& faceImg, bool logits = true) override;
+    EmotiEffLibRes predictEngagement(const std::vector<cv::Mat>& faceImgs) override;
 
 private:
     void initRecognizer(const std::string& modelPath) override;
