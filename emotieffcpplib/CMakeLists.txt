@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.2)
 project("emotiefflib")
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -20,6 +20,7 @@ endif()
 
 set(ORIG_VALUE_BUILD_TESTS ${BUILD_TESTS})
 set(BUILD_TESTS OFF)
+set(CPP17 ON)
 add_subdirectory("${PROJECT_SOURCE_DIR}/3rdparty/xtl")
 add_subdirectory("${PROJECT_SOURCE_DIR}/3rdparty/xtensor")
 set(BUILD_TESTS ${ORIG_VALUE_BUILD_TESTS})
@@ -77,7 +78,6 @@ if(${BUILD_TESTS})
       googletest
       # Release v1.16.0
       URL https://github.com/google/googletest/archive/6910c9d9165801d8827d628cb72eb7ea9dd538c5.zip
-      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
