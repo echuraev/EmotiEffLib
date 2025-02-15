@@ -17,10 +17,10 @@ struct EmotiEffLibRes {
 };
 
 struct EmotiEffLibConfig {
-    std::string backend;
-    std::string featureExtractorPath;
-    std::string classifierPath;
-    std::string engagementClassifierPath;
+    std::string backend = "";
+    std::string featureExtractorPath = "";
+    std::string classifierPath = "";
+    std::string engagementClassifierPath = "";
     std::string modelName = "";
 };
 
