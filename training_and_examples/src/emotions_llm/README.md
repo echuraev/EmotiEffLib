@@ -7,4 +7,3 @@ This repository contains the source code of our demo acceptaed at [IJCAI 2024](h
   year = 	 {2024}
 }
 ```
-
