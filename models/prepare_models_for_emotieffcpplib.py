@@ -234,5 +234,5 @@ if __name__ == "__main__":
         pass
     engagement_onnx_name = os.path.join(out_models_dir, "engagement_classifier_2560_128.onnx")
     engagement_torch_name = os.path.join(out_models_dir, "engagement_classifier_2560_128.pt")
-    onnx_engagement_model = engagement_to_onnx_converter(engagement_onnx_name)
-    engagement_to_torch_converter(onnx_engagement_model, engagement_torch_name)
+    engagement_to_onnx_converter(engagement_onnx_name)
+    engagement_to_torch_converter(engagement_torch_name)

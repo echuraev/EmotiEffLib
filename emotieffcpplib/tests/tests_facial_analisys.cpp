@@ -342,7 +342,7 @@ TEST_P(EmotiEffLibTests, OnVideoOneModel) {
 
 TEST_P(EmotiEffLibTests, OnVideoEngagement) {
     auto& [backend, modelName] = GetParam();
-    if (backend == "torch" || modelName.find("_b2_") != std::string::npos) {
+    if (modelName.find("_b2_") != std::string::npos) {
         GTEST_SKIP() << "Skipping test because of unsupported model.";
     }
     std::string pyTestDir = getPathToPythonTestDir();
@@ -384,7 +384,7 @@ TEST_P(EmotiEffLibTests, OnVideoEngagement) {
 
 TEST_P(EmotiEffLibTests, OnVideoDistraction) {
     auto& [backend, modelName] = GetParam();
-    if (backend == "torch" || modelName.find("_b2_") != std::string::npos) {
+    if (modelName.find("_b2_") != std::string::npos) {
         GTEST_SKIP() << "Skipping test because of unsupported model.";
     }
     std::string pyTestDir = getPathToPythonTestDir();
@@ -427,7 +427,7 @@ TEST_P(EmotiEffLibTests, OnVideoDistraction) {
 
 TEST_P(EmotiEffLibTests, OnVideoEmotionAndEngagement) {
     auto& [backend, modelName] = GetParam();
-    if (backend == "torch" || modelName.find("_b2_") != std::string::npos) {
+    if (modelName.find("_b2_") != std::string::npos) {
         GTEST_SKIP() << "Skipping test because of unsupported model.";
     }
     std::string pyTestDir = getPathToPythonTestDir();

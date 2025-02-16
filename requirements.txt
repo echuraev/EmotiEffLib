@@ -3,7 +3,6 @@ facenet-pytorch
 isort
 numpy
 onnx
-onnx2pytorch
 onnxruntime
 opencv-python
 pillow
