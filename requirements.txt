@@ -1,15 +1,4 @@
-black
-facenet-pytorch
-isort
 numpy
-onnx
-onnxruntime
 opencv-python
 pillow
-pre-commit
-pylint
-tensorflow
-tf2onnx
 timm==0.9.*
-torch
-torchvision
