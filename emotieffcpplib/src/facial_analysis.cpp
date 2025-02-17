@@ -1,3 +1,8 @@
+/**
+ * @file facial_analysis.cpp
+ * @brief Implementation of the EmotiEffLibRecognizer base class and its utility functions.
+ */
+
 #include "emotiefflib/facial_analysis.h"
 #include "emotiefflib/backends/onnx/facial_analysis.h"
 #include "emotiefflib/backends/torch/facial_analysis.h"
