@@ -1,3 +1,8 @@
+/**
+ * @file facial_analysis.cpp
+ * @brief Implementation of the ONNX backend for the EmotiEffLibRecognizer.
+ */
+
 #include "emotiefflib/backends/onnx/facial_analysis.h"
 
 #include <xtensor/xadapt.hpp>
@@ -5,9 +10,16 @@
 #include <xtensor/xview.hpp>
 
 namespace {
-// Important! Looks like Ort::Value doesn't contain the own handler in it.
-// Instead, it points to the memory allocated by other objects, e.g. std::vector or xt::xarray.
-// We have to make sure that during operation with Ort::Value the initial object is in valid state.
+/**
+ * @brief Converts an xt::xarray to an ONNX Runtime tensor.
+ *
+ * Important! Looks like Ort::Value doesn't contain the own handler in it.
+ * Instead, it points to the memory allocated by other objects, e.g. std::vector or xt::xarray.
+ * We have to make sure that during operation with Ort::Value the initial object is in valid state.
+ *
+ * @param xarray The input xt::xarray.
+ * @return The converted ONNX Runtime tensor.
+ */
 Ort::Value xarray2tensor(xt::xarray<float>& xarray) {
     auto xtensor = xt::eval(xarray);
     // Extract shape
@@ -27,6 +39,14 @@ Ort::Value xarray2tensor(xt::xarray<float>& xarray) {
     return onnx_tensor;
 }
 
+/**
+ * @brief Converts an ONNX Runtime tensor to an xt::xarray.
+ *
+ * This function creates a deep copy of Ort::Value and returns xt::xarray.
+ *
+ * @param tensor The input ONNX Runtime tensor.
+ * @return The converted xt::xarray.
+ */
 xt::xarray<float> tensor2xarray(const Ort::Value& tensor) {
     if (!tensor.IsTensor()) {
         throw std::runtime_error("Input ONNX Value is not a tensor!");
@@ -49,6 +69,11 @@ xt::xarray<float> tensor2xarray(const Ort::Value& tensor) {
     return result;
 }
 
+/**
+ * @brief Checks if the model has the correct number of inputs and outputs.
+ *
+ * @param session The ONNX Runtime session.
+ */
 void checkModelInputs(const Ort::Session& session) {
     if (session.GetInputCount() != 1 || session.GetOutputCount() != 1)
         throw std::runtime_error("Only models with one input and one output are supported!");

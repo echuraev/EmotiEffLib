@@ -1,9 +1,19 @@
+/**
+ * @file facial_analysis.cpp
+ * @brief Implementation of the Torch backend for the EmotiEffLibRecognizer.
+ */
+
 #include "emotiefflib/backends/torch/facial_analysis.h"
 
 #include <xtensor/xadapt.hpp>
 
 namespace {
-// Convert xt::xarray to torch::Tensor
+/**
+ * @brief Converts an xt::xarray to a torch::Tensor.
+ *
+ * @param xarray The input xt::xarray.
+ * @return The converted torch::Tensor.
+ */
 torch::Tensor xarray2tensor(const xt::xarray<float>& xtensor) {
     std::vector<int64_t> shape(xtensor.shape().begin(), xtensor.shape().end());
     std::vector<float> data(xtensor.begin(), xtensor.end());
@@ -12,7 +22,14 @@ torch::Tensor xarray2tensor(const xt::xarray<float>& xtensor) {
         .clone();
 }
 
-// Convert torch::Tensor to xt::xarray
+/**
+ * @brief Converts an torch::Tensor to an xt::xarray.
+ *
+ * This function creates a deep copy of torch::Tensor and returns xt::xarray.
+ *
+ * @param tensor The input torch::Tensor.
+ * @return The converted xt::xarray.
+ */
 xt::xarray<float> tensor2xarray(const torch::Tensor& tensor) {
     torch::Tensor cpu_tensor =
         tensor.to(torch::kCPU).contiguous(); // Ensure CPU and contiguous memory
