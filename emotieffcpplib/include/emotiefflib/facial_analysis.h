@@ -18,6 +18,7 @@ struct EmotiEffLibRes {
 
 struct EmotiEffLibConfig {
     std::string backend = "";
+    std::string fullPipelineEmotionModelPath = "";
     std::string featureExtractorPath = "";
     std::string classifierPath = "";
     std::string engagementClassifierPath = "";

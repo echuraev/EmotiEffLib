@@ -211,11 +211,16 @@ void EmotiEffLibRecognizerOnnx::configParser(const EmotiEffLibConfig& config) {
     // Define session options
     Ort::SessionOptions session_options;
 
-    if (config.featureExtractorPath.empty()) {
-        throw std::runtime_error(
-            "featureExtractorPath MUST be specified in the EmotiEffLibConfig.");
-    } else {
-        // Load the ONNX model
+    if (config.fullPipelineEmotionModelPath.empty() && config.featureExtractorPath.empty()) {
+        throw std::runtime_error("fullPipelineEmotionModelPath or featureExtractorPath MUST be "
+                                 "specified in the EmotiEffLibConfig.");
+    }
+    if (!config.fullPipelineEmotionModelPath.empty()) {
+        Ort::Session model(env_, config.fullPipelineEmotionModelPath.c_str(), session_options);
+        models_.push_back(std::move(model));
+        fullPipelineModelIdx_ = models_.size() - 1;
+    }
+    if (!config.featureExtractorPath.empty()) {
         Ort::Session model(env_, config.featureExtractorPath.c_str(), session_options);
         models_.push_back(std::move(model));
         featureExtractorIdx_ = models_.size() - 1;
