@@ -5,6 +5,8 @@
 
 This repository contains code that was developed by A. Savchenko and E. Churaev during their research at the HSE University and Sber AI Lab.
 
+This repository contains two implementations of EmotiEffLib: [Python](emotiefflib/README.md) and [C++](emotieffcpplib/README.md).
+
 ## License
 
 The code of EmotiEffLib Python Library is released under the Apache-2.0 License. There is no limitation for both academic and commercial usage.
@@ -28,6 +30,11 @@ If you want to run our mobile application, please, run the following scripts ins
 ```
 python to_tflite.py
 python to_pytorchlite.py
+```
+
+If you want to run EmotiEffCppLib then prepare the models for inference with C++ library:
+```
+python models/prepare_models_for_emotieffcpplib.py
 ```
 
 NOTE!!! I updated the models so that they should work with timm library of version 0.9.*. However, for v0.1 version, please be sure that EfficientNet models for PyTorch are based on old timm 0.4.5 package, so that exactly this version should be installed by the following command:
