@@ -7,3 +7,4 @@ dist
 *egg-info
 .cache
 models/emotieffcpplib_prepared_models
+docs/html
