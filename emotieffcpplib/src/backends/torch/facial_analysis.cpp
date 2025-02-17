@@ -167,10 +167,18 @@ void EmotiEffLibRecognizerTorch::configParser(const EmotiEffLibConfig& config) {
         modelName_ = config.modelName;
     }
 
-    if (config.featureExtractorPath.empty()) {
-        throw std::runtime_error(
-            "featureExtractorPath MUST be specified in the EmotiEffLibConfig.");
-    } else {
+    if (config.fullPipelineEmotionModelPath.empty() && config.featureExtractorPath.empty()) {
+        throw std::runtime_error("fullPipelineEmotionModelPath or featureExtractorPath MUST be "
+                                 "specified in the EmotiEffLibConfig.");
+    }
+    if (!config.fullPipelineEmotionModelPath.empty()) {
+        torch::jit::script::Module model = torch::jit::load(config.fullPipelineEmotionModelPath);
+        model.to(torch::Device(torch::kCPU));
+        model.eval();
+        models_.push_back(model);
+        fullPipelineModelIdx_ = models_.size() - 1;
+    }
+    if (!config.featureExtractorPath.empty()) {
         torch::jit::script::Module model = torch::jit::load(config.featureExtractorPath);
         model.to(torch::Device(torch::kCPU));
         model.eval();

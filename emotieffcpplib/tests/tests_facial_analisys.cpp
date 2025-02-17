@@ -590,7 +590,8 @@ TEST(EmotiEffLibTests, CheckIncorrectConfig) {
         EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
         FAIL();
     } catch (const std::runtime_error& e) {
-        EXPECT_EQ("featureExtractorPath MUST be specified in the EmotiEffLibConfig.",
+        EXPECT_EQ("fullPipelineEmotionModelPath or featureExtractorPath MUST be specified in the "
+                  "EmotiEffLibConfig.",
                   std::string(e.what()));
     } catch (...) {
         FAIL();
@@ -600,7 +601,8 @@ TEST(EmotiEffLibTests, CheckIncorrectConfig) {
         EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
         FAIL();
     } catch (const std::runtime_error& e) {
-        EXPECT_EQ("featureExtractorPath MUST be specified in the EmotiEffLibConfig.",
+        EXPECT_EQ("fullPipelineEmotionModelPath or featureExtractorPath MUST be specified in the "
+                  "EmotiEffLibConfig.",
                   std::string(e.what()));
     } catch (...) {
         FAIL();
