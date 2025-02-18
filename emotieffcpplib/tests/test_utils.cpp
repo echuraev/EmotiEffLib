@@ -40,15 +40,18 @@ std::vector<cv::Mat> recognizeFaces(const cv::Mat& frame, int downscaleWidth) {
     fs::path dirWithModels(getEmotiEffLibRootDir());
     dirWithModels =
         dirWithModels / "emotieffcpplib" / "3rdparty" / "opencv-mtcnn" / "data" / "models";
-    const ProposalNetwork::Config pConfig = {.protoText = dirWithModels / "det1.prototxt",
-                                             .caffeModel = dirWithModels / "det1.caffemodel",
-                                             .threshold = 0.6f};
-    const RefineNetwork::Config rConfig = {.protoText = dirWithModels / "det2.prototxt",
-                                           .caffeModel = dirWithModels / "det2.caffemodel",
-                                           .threshold = 0.7f};
-    const OutputNetwork::Config oConfig = {.protoText = dirWithModels / "det3.prototxt",
-                                           .caffeModel = dirWithModels / "det3.caffemodel",
-                                           .threshold = 0.7f};
+    ProposalNetwork::Config pConfig;
+    pConfig.protoText = dirWithModels / "det1.prototxt";
+    pConfig.caffeModel = dirWithModels / "det1.caffemodel";
+    pConfig.threshold = 0.6f;
+    RefineNetwork::Config rConfig;
+    rConfig.protoText = dirWithModels / "det2.prototxt";
+    rConfig.caffeModel = dirWithModels / "det2.caffemodel";
+    rConfig.threshold = 0.7f;
+    OutputNetwork::Config oConfig;
+    oConfig.protoText = dirWithModels / "det3.prototxt";
+    oConfig.caffeModel = dirWithModels / "det3.caffemodel";
+    oConfig.threshold = 0.7f;
     MTCNNDetector detector(pConfig, rConfig, oConfig);
     auto scaledFrame = downscaleImageToWidth(frame, downscaleWidth);
     double downcastRatioW = static_cast<double>(frame.cols) / scaledFrame.cols;

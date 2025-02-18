@@ -7,3 +7,6 @@
 [submodule "emotieffcpplib/3rdparty/xtl"]
 	path = emotieffcpplib/3rdparty/xtl
 	url = git@github.com:xtensor-stack/xtl.git
+[submodule "docs/tutorials/cpp/json"]
+	path = docs/tutorials/cpp/json
+	url = git@github.com:nlohmann/json.git
