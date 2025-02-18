@@ -11,6 +11,10 @@ This repository contains two implementations of EmotiEffLib: [Python](emotieffli
 
 The code of EmotiEffLib Python Library is released under the Apache-2.0 License. There is no limitation for both academic and commercial usage.
 
+## Documentation
+
+Full documentation is available [here](https://echuraev.github.io/EmotiEffLib/).
+
 ## Installing
 
 ```

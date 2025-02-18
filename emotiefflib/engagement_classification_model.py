@@ -3,20 +3,24 @@ Engagement classification model implementation
 """
 
 # pylint: disable=no-name-in-module,import-error
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import (
-    Activation,
-    Dense,
-    Input,
-    Lambda,
-    Multiply,
-    Permute,
-    RepeatVector,
-    Reshape,
-)
-from tensorflow.keras.models import Model
-
 from .utils import get_engagement_classification_weights
+
+TF_AVAILABLE = True
+try:
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.layers import (
+        Activation,
+        Dense,
+        Input,
+        Lambda,
+        Multiply,
+        Permute,
+        RepeatVector,
+        Reshape,
+    )
+    from tensorflow.keras.models import Model
+except ImportError:
+    TF_AVAILABLE = False
 
 
 def _single_attention_model(n_classes, weights, feature_vector_dim, samples=None):
@@ -36,6 +40,8 @@ def _single_attention_model(n_classes, weights, feature_vector_dim, samples=None
     Raises:
         ValueError: If the feature vector dimension is not 2560.
     """
+    if TF_AVAILABLE is False:
+        raise RuntimeError("Cannot create engagement model because tensorflow is not installed")
     if feature_vector_dim != 2560:
         raise ValueError("Unsupported feature vector dim. Maybe you use unsupported model.")
     inputs = Input(

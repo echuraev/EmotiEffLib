@@ -15,7 +15,7 @@ repos:
     rev: v3.1.0
     hooks:
       - id: pylint
-        args: [src, --disable=import-error]
+        args: [training_and_examples, --disable=import-error]
         files: \.py$
   - repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.10.1
