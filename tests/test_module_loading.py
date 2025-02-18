@@ -35,5 +35,5 @@ def test_onnx_is_not_installed():
     """
     Check exception when EmotiEffLib recognizer is called for ONNX without ONNX installation
     """
-    with pytest.raises(ImportError, match="Looks like torch module is not installed: "):
+    with pytest.raises(ImportError, match="Looks like onnx module is not installed: "):
         _ = EmotiEffLibRecognizer(engine="onnx")

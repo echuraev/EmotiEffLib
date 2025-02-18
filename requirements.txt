@@ -1,4 +1,5 @@
 numpy
+onnx
+onnxruntime
 opencv-python
 pillow
-timm==0.9.*

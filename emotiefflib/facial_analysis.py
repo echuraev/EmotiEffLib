@@ -441,5 +441,5 @@ def EmotiEffLibRecognizer(
         import onnxruntime as ort
         from onnx import helper, numpy_helper
     except ImportError as e:
-        raise ImportError("Looks like torch module is not installed: ", e) from e
+        raise ImportError("Looks like onnx module is not installed: ", e) from e
     return EmotiEffLibRecognizerOnnx(model_name)

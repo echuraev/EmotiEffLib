@@ -424,7 +424,7 @@ MATHJAX_EXTENSIONS     =
 # This tag requires that the tag USE_MATHJAX is set to YES.
 
 MATHJAX_CODEFILE       =
-SEARCHENGINE           = YES
+SEARCHENGINE           = NO
 SERVER_BASED_SEARCH    = NO
 EXTERNAL_SEARCH        = NO
 SEARCHENGINE_URL       =
