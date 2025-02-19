@@ -37,8 +37,9 @@ git submodule update --init --recursive
 #### 2.1 Libtorch
 1. Download Libtorch for your OS from here: https://pytorch.org/get-started/locally/
 
-  NOTE: The newest version Libtorch for x86 MacOS is not available. The latest
+   NOTE: The newest version Libtorch for x86 MacOS is not available. The latest
 available version 2.2.2 can be downloaded from here: https://download.pytorch.org/libtorch/cpu/libtorch-macos-x86_64-2.2.2.zip
+
 2. Unpack downloaded archive and path to this folder will be used in
    `-DWITH_TORCH` option.
 

@@ -10,10 +10,6 @@ efficient real-time analysis across various platforms.
 
 This repository contains two implementations of EmotiEffLib: [Python](emotiefflib/README.md) and [C++](emotieffcpplib/README.md).
 
-## License
-
-The code of EmotiEffLib Python Library is released under the Apache-2.0 License. There is no limitation for both academic and commercial usage.
-
 ## Documentation
 
 Full documentation is available [here](https://echuraev.github.io/EmotiEffLib/).
@@ -100,3 +96,7 @@ If you use our models, please cite the following papers:
   url={https://ieeexplore.ieee.org/document/9815154}
 }
 ```
+
+## License
+
+The code of EmotiEffLib Python Library is released under the Apache-2.0 License. There is no limitation for both academic and commercial usage.
