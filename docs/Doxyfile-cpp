@@ -24,16 +24,17 @@ SHOW_GROUPED_MEMB_INC  = NO
 SORT_BRIEF_DOCS        = YES
 SORT_MEMBERS_CTORS_1ST = YES
 SHOW_NAMESPACES        = YES
-LAYOUT_FILE            = DoxygenLayout-project.xml
+LAYOUT_FILE            = DoxygenLayout-cpp.xml
 
-INPUT                  = ../emotieffcpplib
+INPUT                  = ../emotieffcpplib tutorials/cpp
 INCLUDE_PATH           = ../emotieffcpplib/include/ ../emotieffcpplib/3rdparty/xtensor/include
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          =
 RECURSIVE              = YES
-EXCLUDE                = ../emotieffcpplib/3rdparty
+EXCLUDE                = ../emotieffcpplib/3rdparty tutorials/cpp/json
 EXCLUDE_PATTERNS       = */build/* */cmake-build-Debug/* */cmake-build-Release/* */3rdparty/* */tests/*
 USE_MDFILE_AS_MAINPAGE = ../emotieffcpplib/README.md
+EXAMPLE_PATH           = tutorials/cpp
 IMPLICIT_DIR_DOCS      = YES
 
 #---------------------------------------------------------------------------

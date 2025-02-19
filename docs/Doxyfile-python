@@ -25,14 +25,16 @@ SHOW_GROUPED_MEMB_INC  = NO
 SORT_BRIEF_DOCS        = YES
 SORT_MEMBERS_CTORS_1ST = YES
 SHOW_NAMESPACES        = YES
-LAYOUT_FILE            = DoxygenLayout-project.xml
+LAYOUT_FILE            = DoxygenLayout-python.xml
 
-INPUT                  = ../emotiefflib
+INPUT                  = ../emotiefflib tutorials/python
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          =
 RECURSIVE              = YES
-EXCLUDE_PATTERNS       =
+EXCLUDE                = tutorials/python/data
+EXCLUDE_PATTERNS       = */.ipynb_checkpoints/*
 USE_MDFILE_AS_MAINPAGE = ../emotiefflib/README.md
+EXAMPLE_PATH           = tutorials/cpp
 IMPLICIT_DIR_DOCS      = YES
 
 #---------------------------------------------------------------------------

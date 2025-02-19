@@ -3,7 +3,10 @@
 [![pypi package](https://img.shields.io/badge/version-v0.2.0-blue)](https://pypi.org/project/hsemotion)
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/classifying-emotions-and-engagement-in-online/facial-expression-recognition-on-affectnet)](https://paperswithcode.com/sota/facial-expression-recognition-on-affectnet?p=classifying-emotions-and-engagement-in-online)
 
-This repository contains code that was developed by A. Savchenko and E. Churaev during their research at the HSE University and Sber AI Lab.
+EmotiEffLib (Emotion Efficient Library) is a lightweight library for emotion and
+engagement recognition in photos and videos. It can be used in Python and C++.
+It provides flexibility with backend support for Pytorch and ONNX, enabling
+efficient real-time analysis across various platforms.
 
 This repository contains two implementations of EmotiEffLib: [Python](emotiefflib/README.md) and [C++](emotieffcpplib/README.md).
 
@@ -17,18 +20,18 @@ Full documentation is available [here](https://echuraev.github.io/EmotiEffLib/).
 
 ## Installing
 
-```
-    python setup.py install
-```
-
-It is also possible to install it via pip:
-```
-    pip install emotiefflib
-```
+Detailed building and installing instruction provided in the pages related to
+each library: [Python](emotiefflib/README.md) and [C++](emotieffcpplib/README.md).
 
 ## Usage
 
-In order to run our code on the datasets, please prepare them firstly using our TensorFlow notebooks: [train_emotions.ipynb](src/affectnet/train_emotions.ipynb), [AFEW_train.ipynb](src/AFEW_train.ipynb) and [VGAF_train.ipynb](src/VGAF_train.ipynb).
+Detailed examples of using the Python and C++ modules are provided in the [Tutorials](docs/tutorials/README.md).
+
+If you want to run EmotiEffCppLib then prepare the models for inference with C++ library:
+```
+python models/prepare_models_for_emotieffcpplib.py
+```
+In order to run our code on the datasets, please prepare them firstly using our TensorFlow notebooks: [train_emotions.ipynb](training_and_examples/affectnet/train_emotions.ipynb), [AFEW_train.ipynb](training_and_examples/AFEW_train.ipynb) and [VGAF_train.ipynb](training_and_examples/VGAF_train.ipynb).
 
 If you want to run our mobile application, please, run the following scripts inside [mobile_app](mobile_app) folder:
 ```
@@ -36,12 +39,7 @@ python to_tflite.py
 python to_pytorchlite.py
 ```
 
-If you want to run EmotiEffCppLib then prepare the models for inference with C++ library:
-```
-python models/prepare_models_for_emotieffcpplib.py
-```
-
-NOTE!!! I updated the models so that they should work with timm library of version 0.9.*. However, for v0.1 version, please be sure that EfficientNet models for PyTorch are based on old timm 0.4.5 package, so that exactly this version should be installed by the following command:
+NOTE!!! The models were updated so that they should work with timm library of version 0.9.*. However, for v0.1 version, please be sure that EfficientNet models for PyTorch are based on old timm 0.4.5 package, so that exactly this version should be installed by the following command:
 ```
 pip install timm==0.4.5
 ```
@@ -65,7 +63,7 @@ Here are the performance metrics (accuracy on AffectNet, AFEW and VGAF), F1-scor
 | [enet_b0_8_best_afew.pt](models/affectnet_emotions/enet_b0_8_best_afew.pt) | 60.95  | 64.63  | 59.89  | 66.80  | 59.32 | 1.110 |59 ± 26 | 16 |
 | [enet_b0_8_best_vgaf.pt](models/affectnet_emotions/enet_b0_8_best_vgaf.pt) | 61.32   | 64.57   | 55.14  | 68.29  | 59.72 | 1.123 |59 ± 26 | 16 |
 | [enet_b0_8_va_mtl.pt](models/affectnet_emotions/enet_b0_8_va_mtl.pt) | 61.93   | 64.94   | 56.73  | 66.58  | 60.94 | 1.276 |60 ± 32 | 16 |
-| [enet_b0_7.pt](models/affectnet_emotions/enet_b0_7.pt) | -    | 65.74   | 56.99  | 65.18  | - | 1.111 |59 ± 26 | 16 | 16 |
+| [enet_b0_7.pt](models/affectnet_emotions/enet_b0_7.pt) | -    | 65.74   | 56.99  | 65.18  | - | 1.111 |59 ± 26 | 16 |
 | [enet_b2_7.pt](models/affectnet_emotions/enet_b2_7.pt) | -    | 66.34   | 59.63  | 69.84  | - | 1.134 |191 ± 18 | 30 |
 | [enet_b2_8.pt](models/affectnet_emotions/enet_b2_8.pt) | 63.03  | 66.29 | 57.78  | 70.23  | 52.06 | 1.147 |191 ± 18 | 30 |
 | [enet_b2_8_best.pt](models/affectnet_emotions/enet_b2_8_best.pt) | 63.125  | 66.51 | 56.73  | 71.12  | - | - |191 ± 18 | 30 |
@@ -91,43 +89,6 @@ If you use our models, please cite the following papers:
   url={https://proceedings.mlr.press/v202/savchenko23a.html}
 }
 ```
-
-```BibTex
-@inproceedings{savchenko2021facial,
-  title={Facial expression and attributes recognition based on multi-task learning of lightweight neural networks},
-  author={Savchenko, Andrey V.},
-  booktitle={Proceedings of the 19th International Symposium on Intelligent Systems and Informatics (SISY)},
-  pages={119--124},
-  year={2021},
-  organization={IEEE},
-  url={https://arxiv.org/abs/2103.17107}
-}
-```
-
-```BibTex
-@inproceedings{Savchenko_2022_CVPRW,
-  author    = {Savchenko, Andrey V.},
-  title     = {Video-Based Frame-Level Facial Analysis of Affective Behavior on Mobile Devices Using EfficientNets},
-  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
-  month     = {June},
-  year      = {2022},
-  pages     = {2359-2366},
-  url={https://arxiv.org/abs/2103.17107}
-}
-```
-
-```BibTex
-@inproceedings{Savchenko_2022_ECCVW,
-  author    = {Savchenko, Andrey V.},
-  title     = {{MT-EmotiEffNet} for Multi-task Human Affective Behavior Analysis and Learning from Synthetic Data},
-  booktitle = {Proceedings of the European Conference on Computer Vision (ECCV 2022) Workshops},
-  pages={45--59},
-  year={2023},
-  organization={Springer},
-  url={https://arxiv.org/abs/2207.09508}
-}
-```
-
 
 ```BibTex
 @article{savchenko2022classifying,
