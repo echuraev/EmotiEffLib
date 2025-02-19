@@ -28,7 +28,11 @@ function(build_mtcnn)
     file (GLOB MTCNN_LIB_SOURCE_FILES "${MTCNN_LIB_SRC_PATH}/*.cc" "${MTCNN_LIB_SRC_PATH}/**/*.cc")
 
     # set library
-    add_library (${MTCNN_LIB_NAME} STATIC ${MTCNN_LIB_SOURCE_FILES} ${MTCNN_LIB_HEADER_FILES})
+    add_library (${MTCNN_LIB_NAME} ${MTCNN_LIB_SOURCE_FILES} ${MTCNN_LIB_HEADER_FILES})
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        VERSION 1.0
+        SOVERSION 1
+    )
 endfunction()
 
 build_mtcnn()

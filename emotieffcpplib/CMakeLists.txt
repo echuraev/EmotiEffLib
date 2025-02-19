@@ -13,6 +13,7 @@ find_package(OpenCV REQUIRED)
 option(BUILD_TESTS "Build EmotiEffCppLib with tests" OFF)
 option(WITH_TORCH "Path to the direcotry with Libtorch" OFF)
 option(WITH_ONNX "Path to the direcotry with ONNXRuntime" OFF)
+option(BUILD_SHARED_LIBS "Build shared library instead of static" OFF)
 
 if(NOT WITH_TORCH AND NOT WITH_ONNX)
     message(FATAL_ERROR "At least one inference engine should be specified: -DWITH_TORCH or -DWITH_ONNX")
@@ -63,8 +64,14 @@ include_directories(
     ${INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} STATIC
+add_library(${PROJECT_NAME}
     ${src_files}
+)
+
+# This automatically sets STATIC or SHARED based on the option
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VERSION 1.0
+    SOVERSION 1
 )
 
 target_link_libraries(${PROJECT_NAME}
