@@ -14,7 +14,7 @@ if __name__ == "__main__":
         filename = "enet_b0_8_va_mtl"
 
     example = torch.rand(1, 3, INPUT_SIZE, INPUT_SIZE)
-    model = torch.load("../models/affectnet_emotions/" + filename + ".pt").cpu()
+    model = torch.load("../../models/affectnet_emotions/" + filename + ".pt").cpu()
     model.eval()
     traced_script_module = torch.jit.trace(model, example)
     # traced_script_module.save(filename+'.pt')

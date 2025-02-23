@@ -27,13 +27,12 @@ If you want to run EmotiEffCppLib then prepare the models for inference with C++
 ```
 python models/prepare_models_for_emotieffcpplib.py
 ```
-In order to run our code on the datasets, please prepare them firstly using our TensorFlow notebooks: [train_emotions.ipynb](training_and_examples/affectnet/train_emotions.ipynb), [AFEW_train.ipynb](training_and_examples/AFEW_train.ipynb) and [VGAF_train.ipynb](training_and_examples/VGAF_train.ipynb).
 
-If you want to run our mobile application, please, run the following scripts inside [mobile_app](mobile_app) folder:
-```
-python to_tflite.py
-python to_pytorchlite.py
-```
+Also, in the folder [training_and_examples](training_and_examples/README.md) you can find a number
+of examples of usage our models and training process. This folder also contains an example of
+[mobile application](training_and_examples/mobile_app) for recognizing user emotions.
+
+In order to run our code on the datasets, please prepare them firstly using our TensorFlow notebooks: [train_emotions.ipynb](training_and_examples/affectnet/train_emotions.ipynb), [AFEW_train.ipynb](training_and_examples/AFEW_train.ipynb) and [VGAF_train.ipynb](training_and_examples/VGAF_train.ipynb).
 
 NOTE!!! The models were updated so that they should work with timm library of version 0.9.*. However, for v0.1 version, please be sure that EfficientNet models for PyTorch are based on old timm 0.4.5 package, so that exactly this version should be installed by the following command:
 ```

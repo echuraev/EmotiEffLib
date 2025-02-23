@@ -51,7 +51,7 @@ if __name__ == "__main__":
         "app/src/main/assets/age_gender_ethnicity_224_deep-03-0.13-0.97-0.88.pb", quantize=False
     )
     convert_h5(
-        "../models/affectnet_emotions/mobilenet_7.h5",
+        "../../models/affectnet_emotions/mobilenet_7.h5",
         "app/src/main/assets/emotions_mobilenet",
         quantize=False,
     )
