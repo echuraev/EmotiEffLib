@@ -21,7 +21,7 @@ setup(
     author_email="andrey.v.savchenko@gmail.com, egor.churaev@gmail.com",
     packages=find_packages("."),
     # download_url="https://github.com/HSE-asavchenko/hsemotion-onnx/archive/v0.3.1.tar.gz",
-    url="https://github.com/echuraev/EmotiEffLib",
+    url="https://github.com/av-savchenko/EmotiEffLib",
     description="EmotiEffLib Python Library for Facial Emotion and Engagement Recognition",
     keywords=[
         "face expression recognition",

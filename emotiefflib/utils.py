@@ -22,8 +22,7 @@ def download_model(model_file: str, path_in_repo: str) -> str:
     fpath = os.path.join(cache_dir, model_file)
     if not os.path.isfile(fpath):
         url = (
-            # "https://github.com/HSE-asavchenko/face-emotion-recognition/blob/main/"
-            "https://github.com/echuraev/face-emotion-recognition/blob/echuraev/dev_branch/"
+            "https://github.com/av-savchenko/EmotiEffLib/blob/main/"
             + path_in_repo
             + model_file
             + "?raw=true"
