@@ -24,8 +24,6 @@ from engagement_classification.engagement_single_attention_converter import (
 
 from emotiefflib.facial_analysis import get_model_list
 
-# pylint: enable=duplicate-code
-
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 

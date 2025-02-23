@@ -2,7 +2,7 @@
 Engagement classification model converter to ONNX and torch
 """
 
-# pylint: disable=no-name-in-module,import-error
+# pylint: disable=no-name-in-module,import-error,duplicate-code
 import os
 import pathlib
 from collections import OrderedDict
