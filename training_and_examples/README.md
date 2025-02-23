@@ -12,3 +12,9 @@ This directory contains mobile application, several auxiliary Python files and t
 - [video_summarizer.ipynb](video_summarizer.ipynb): processing of recording of online conference with facial clustering and creation of gif files with emotions of every face
 - [display_emotions.ipynb](display_emotions.ipynb): examples of usages of our models (both PyTorch and TensorFlow) and visualization of their predictions using GradCam
 - [mobile_app](mobile_app): A mobile application which can be used for predicting user emotions.
+  If you want to run our mobile application, please, run the following scripts inside [mobile_app](mobile_app) folder:
+  ```
+  python to_tflite.py
+  python to_pytorchlite.py
+  ```
+- [personalized_models](personalized_models): Containis jupyter notebooks for creating personalized engagement detection models.
