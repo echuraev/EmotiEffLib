@@ -1,0 +1,24 @@
+name: Build Binder Notebook Container
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout files in repo
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 1 # shallow clone
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Update jupyter dependencies with repo2docker
+      uses: jupyterhub/repo2docker-action@master
+      with:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        PUBLIC_REGISTRY_CHECK: true
