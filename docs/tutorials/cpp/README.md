@@ -41,9 +41,4 @@ To run the examples locally you need to do the following:
   ./download_test_data.sh
   tar -xzf data.tar.gz
   ```
-5. Specify the following environment variables:
-  ```
-  export EMOTIEFFLIB_BUILD_DIR="<EmotiEffLib_root>/emotieffcpplib/build"
-  export EMOTIEFFLIB_ROOT="<EmotiEffLib_root>"
-  ```
-6. Run jupyter notebook and select C++ kernel.
+5. Run jupyter notebook and select C++ kernel.
