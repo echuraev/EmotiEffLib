@@ -9,18 +9,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache
-    - name: Checkout files in repo
-      uses: actions/checkout@v3
-      with:
-        submodules: true
-        fetch-depth: 1 # shallow clone
-        ref: ${{ github.event.pull_request.head.sha }}
-
-    - name: Update jupyter dependencies with repo2docker
+    - name: Update MyBinder cache
       uses: jupyterhub/repo2docker-action@master
       with:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        PUBLIC_REGISTRY_CHECK: true
+        NO_PUSH: true
+        MYBINDERORG_TAG: ${{ github.event.ref }}
