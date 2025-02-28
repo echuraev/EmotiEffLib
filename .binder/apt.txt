@@ -1,5 +1,0 @@
-cmake
-g++
-make
-wget
-libopencv-dev

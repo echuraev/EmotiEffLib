@@ -3,5 +3,4 @@ channels:
     - conda-forge
 dependencies:
     - python=3.10
-    - cmake
     - xeus-cling=0.15.0
