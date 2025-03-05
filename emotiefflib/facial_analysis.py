@@ -42,6 +42,8 @@ def get_model_list() -> List[str]:
         "enet_b2_8",
         "enet_b0_8_va_mtl",
         "enet_b2_7",
+        "mbf_va_mtl",
+        "mobilevit_va_mtl",
     ]
 
 

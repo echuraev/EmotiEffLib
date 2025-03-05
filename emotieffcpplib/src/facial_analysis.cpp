@@ -29,7 +29,8 @@ std::vector<std::string> getAvailableBackends() {
 
 std::vector<std::string> getSupportedModels() {
     return {
-        "enet_b0_8_best_vgaf", "enet_b0_8_best_afew", "enet_b2_8", "enet_b0_8_va_mtl", "enet_b2_7",
+        "enet_b0_8_best_vgaf", "enet_b0_8_best_afew", "enet_b2_8",        "enet_b0_8_va_mtl",
+        "enet_b2_7",           "mbf_va_mtl",          "mobilevit_va_mtl",
     };
 }
 
