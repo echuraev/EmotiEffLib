@@ -35,7 +35,7 @@ std::vector<std::string> getAvailableBackends();
  *
  * @return A vector of strings containing the names of the supported models.
  */
-std::vector<std::string> getSupportedModels();
+std::vector<std::string> getSupportedModels(const std::string& backendName);
 
 /**
  * @brief Structure to store the results of EmotiEffLib.

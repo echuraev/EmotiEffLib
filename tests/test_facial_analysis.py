@@ -64,6 +64,8 @@ def test_one_image_prediction(model_name, engine):
         engine == "onnx" and model_name == "enet_b0_8_best_afew"
     ):
         exp_emotions = ["Happiness", "Anger", "Happiness"]
+    elif model_name in ("mbf_va_mtl", "mobilevit_va_mtl"):
+        exp_emotions = ["Contempt", "Anger", "Fear"]
     else:
         exp_emotions = ["Happiness", "Anger", "Fear"]
     input_file = os.path.join(FILE_DIR, "..", "tests", "test_images", "20180720_174416.jpg")
@@ -95,6 +97,8 @@ def test_one_image_multi_prediction(model_name, engine):
         engine == "onnx" and model_name == "enet_b0_8_best_afew"
     ):
         exp_emotions = ["Happiness", "Anger", "Happiness"]
+    elif model_name in ("mbf_va_mtl", "mobilevit_va_mtl"):
+        exp_emotions = ["Contempt", "Anger", "Fear"]
     else:
         exp_emotions = ["Happiness", "Anger", "Fear"]
     input_file = os.path.join(FILE_DIR, "..", "tests", "test_images", "20180720_174416.jpg")
@@ -245,7 +249,7 @@ def test_engagement_on_video(model_name, engine):
     """
     Simple test that checks engagement on video
     """
-    if model_name in ("enet_b2_8", "enet_b2_7"):
+    if "enet_b0" not in model_name:
         pytest.xfail("These models are not supported")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
@@ -284,7 +288,7 @@ def test_distraction_on_video(model_name, engine):
     """
     Simple test that checks distraction on video
     """
-    if model_name in ("enet_b2_8", "enet_b2_7"):
+    if "enet_b0" not in model_name:
         pytest.xfail("These models are not supported")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"
@@ -323,7 +327,7 @@ def test_engagement_and_emotion_on_video(model_name, engine):
     """
     Simple test that checks level of engagement and emotions on a video
     """
-    if model_name in ("enet_b2_8", "enet_b2_7"):
+    if "enet_b0" not in model_name:
         pytest.xfail("These models are not supported")
     use_cuda = torch.cuda.is_available()
     device = "cuda" if use_cuda else "cpu"

@@ -4,7 +4,6 @@ Trace torch models for usage in C++ Libtorch
 
 import os
 import pathlib
-from typing import Tuple
 
 # pylint: disable=duplicate-code
 try:
@@ -27,31 +26,18 @@ from emotiefflib.facial_analysis import get_model_list
 FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
-def split_torch_model(model) -> Tuple[torch.nn.Module, torch.nn.Module]:
-    """
-    Remove the classifier layer from a model and return the feature extractor and the classifier
-    separately.
-
-    Args:
-        model: A PyTorch model with a `classifier` attribute.
-
-    Returns:
-        Tuple[torch.nn.Module, torch.nn.Module]:
-            - The modified model with the classifier replaced by an identity layer.
-            - The original classifier layer.
-    """
-    last_layer = model.classifier
-    model.classifier = torch.nn.Identity()
-    return model, last_layer
-
-
 def trace_model(
-    torch_model: str, model_out: str, features_extractor_out: str, classifier_out: str
+    model_name: str,
+    torch_model: str,
+    model_out: str,
+    features_extractor_out: str,
+    classifier_out: str,
 ) -> None:
     """
     Convert a PyTorch model into a TorchScript traced model and save it.
 
     Args:
+        model_name (str): Name of the model with extension.
         torch_model (str): Path to the input PyTorch model file.
         model_out (str): Path to save the traced TorchScript original model.
         features_extractor (str): Path to save the traced TorchScript feature extraction model.
@@ -61,19 +47,46 @@ def trace_model(
         None
     """
     print(f"Processing {torch_model}...")
-    img_size = 224 if "_b0_" in torch_model else 260
+    if model_name in ("mbf_va_mtl.pt", "mobilevit_va_mtl.pt"):
+        print(f"Skip unsupported model: {model_name}...")
+        return
+    if "mbf_" in model_name:
+        img_size = 112
+    elif "_b2_" in model_name:
+        img_size = 260
+    elif "ddamfnet" in model_name:
+        img_size = 112
+    else:
+        img_size = 224
     input_shape = (1, 3, img_size, img_size)
     model_example = torch.rand(*input_shape)
     model = torch.load(torch_model, map_location=torch.device("cpu"))
-    traced_script_module = torch.jit.script(model, model_example)
+    # pylint: disable=no-else-return
+    if model_name in ("mbf_va_mtl.pt", "mobilevit_va_mtl.pt"):
+        # This is a workaround but it still is not working because of shapes issues in runtime
+        traced_script_module = torch.jit.trace(model, model_example)
+        traced_script_module = torch.jit.script(traced_script_module, model_example)
+    else:
+        traced_script_module = torch.jit.script(model, model_example)
     traced_script_module.save(model_out)
-    if isinstance(model.classifier, torch.nn.Sequential):
+    if model_name == "mbf_va_mtl.pt":
+        classifier_shape = (1, model.fc.in_features)
+        classifier = model.fc
+        model.fc = torch.nn.Identity()
+    elif model_name == "mobilevit_va_mtl.pt":
+        classifier_shape = (1, model.head.fc.in_features)
+        classifier = model.head.fc
+        model.head.fc = torch.nn.Identity()
+    elif isinstance(model.classifier, torch.nn.Sequential):
         classifier_shape = (1, model.classifier[0].in_features)
+        classifier = model.classifier
+        model.classifier = torch.nn.Identity()
     else:
         classifier_shape = (1, model.classifier.in_features)
-    features_extractor, classifier = split_torch_model(model)
+        classifier = model.classifier
+        model.classifier = torch.nn.Identity()
     classifier_example = torch.rand(*classifier_shape)
-    traced_script_features_extractor = torch.jit.script(features_extractor, model_example)
+    traced_script_features_extractor = torch.jit.script(model, model_example)
     traced_script_features_extractor.save(features_extractor_out)
     traced_script_classifier = torch.jit.script(classifier, classifier_example)
     traced_script_classifier.save(classifier_out)
@@ -99,7 +112,7 @@ def prepare_torch_models(output_dir: str) -> None:
         ):
             print(f"SKIP {mf}")
             continue
-        trace_model(inp, model_out, features_extractor_out, classifier_out)
+        trace_model(mf, inp, model_out, features_extractor_out, classifier_out)
 
 
 def split_onnx_model(

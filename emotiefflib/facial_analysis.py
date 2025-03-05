@@ -4,15 +4,29 @@ Facial emotions recognition implementation
 
 from __future__ import absolute_import, division, print_function
 
+import os
+import pathlib
+import sys
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
+from PIL import Image
+
+from .engagement_classification_model import get_engagement_model
+from .utils import get_model_path_onnx, get_model_path_torch
+
+FILE_DIR = pathlib.Path(__file__).parent.resolve()
 
 try:
     import torch
     from torchvision import transforms
+
+    # It is required for mbf_va_mtl
+    path_to_backbones = os.path.join(FILE_DIR, "backbones")
+    if path_to_backbones not in sys.path:
+        sys.path.append(path_to_backbones)
 except ImportError:
     pass
 try:
@@ -21,10 +35,6 @@ try:
     from onnx import TensorProto, helper, numpy_helper
 except ImportError:
     pass
-from PIL import Image
-
-from .engagement_classification_model import get_engagement_model
-from .utils import get_model_path_onnx, get_model_path_torch
 
 
 def get_model_list() -> List[str]:
@@ -42,6 +52,8 @@ def get_model_list() -> List[str]:
         "enet_b2_8",
         "enet_b0_8_va_mtl",
         "enet_b2_7",
+        "mbf_va_mtl",
+        "mobilevit_va_mtl",
     ]
 
 
@@ -87,6 +99,21 @@ class EmotiEffLibRecognizerBase(ABC):
                 6: "Sadness",
                 7: "Surprise",
             }
+
+        if "mbf_" in model_name:
+            self.mean = [0.5, 0.5, 0.5]
+            self.std = [0.5, 0.5, 0.5]
+            self.img_size = 112
+        else:
+            self.mean = [0.485, 0.456, 0.406]
+            self.std = [0.229, 0.224, 0.225]
+            if "_b2_" in model_name:
+                self.img_size = 260
+            elif "ddamfnet" in model_name:
+                self.img_size = 112
+            else:
+                self.img_size = 224
+
         self.classifier_weights = None
         self.classifier_bias = None
 
@@ -259,21 +286,28 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
         super().__init__(model_name)
         self.device = device
 
-        self.img_size = 224 if "_b0_" in model_name else 260
-
         path = get_model_path_torch(model_name)
         if device == "cpu":
             model = torch.load(path, map_location=torch.device("cpu"))
         else:
             model = torch.load(path)
-        if isinstance(model.classifier, torch.nn.Sequential):
+        if model_name == "mbf_va_mtl":
+            self.classifier_weights = model.fc.weight.cpu().data.numpy()
+            self.classifier_bias = model.fc.bias.cpu().data.numpy()
+            model.fc = torch.nn.Identity()
+        elif model_name == "mobilevit_va_mtl":
+            self.classifier_weights = model.head.fc.weight.cpu().data.numpy()
+            self.classifier_bias = model.head.fc.bias.cpu().data.numpy()
+            model.head.fc = torch.nn.Identity()
+        elif isinstance(model.classifier, torch.nn.Sequential):
             self.classifier_weights = model.classifier[0].weight.cpu().data.numpy()
             self.classifier_bias = model.classifier[0].bias.cpu().data.numpy()
+            model.classifier = torch.nn.Identity()
         else:
             self.classifier_weights = model.classifier.weight.cpu().data.numpy()
             self.classifier_bias = model.classifier.bias.cpu().data.numpy()
+            model.classifier = torch.nn.Identity()
 
-        model.classifier = torch.nn.Identity()
         model = model.to(device)
         self.model = model.eval()
 
@@ -291,7 +325,7 @@ class EmotiEffLibRecognizerTorch(EmotiEffLibRecognizerBase):
             [
                 transforms.Resize((self.img_size, self.img_size)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                transforms.Normalize(mean=self.mean, std=self.std),
             ]
         )
         return test_transforms(Image.fromarray(img))
@@ -327,20 +361,6 @@ class EmotiEffLibRecognizerOnnx(EmotiEffLibRecognizerBase):
 
     def __init__(self, model_name: str = "enet_b0_8_best_vgaf") -> None:
         super().__init__(model_name)
-
-        if "mbf_" in model_name:
-            self.mean = [0.5, 0.5, 0.5]
-            self.std = [0.5, 0.5, 0.5]
-            self.img_size = 112
-        else:
-            self.mean = [0.485, 0.456, 0.406]
-            self.std = [0.229, 0.224, 0.225]
-            if "_b2_" in model_name:
-                self.img_size = 260
-            elif "ddamfnet" in model_name:
-                self.img_size = 112
-            else:
-                self.img_size = 224
 
         path = get_model_path_onnx(model_name)
         model = onnx.load(path)

@@ -27,10 +27,14 @@ std::vector<std::string> getAvailableBackends() {
     };
 }
 
-std::vector<std::string> getSupportedModels() {
-    return {
-        "enet_b0_8_best_vgaf", "enet_b0_8_best_afew", "enet_b2_8", "enet_b0_8_va_mtl", "enet_b2_7",
-    };
+std::vector<std::string> getSupportedModels(const std::string& backendName) {
+    std::vector<std::string> modelsList = {"enet_b0_8_best_vgaf", "enet_b0_8_best_afew",
+                                           "enet_b2_8", "enet_b0_8_va_mtl", "enet_b2_7"};
+    if (backendName == "onnx") {
+        modelsList.push_back("mbf_va_mtl");
+        modelsList.push_back("mobilevit_va_mtl");
+    }
+    return modelsList;
 }
 
 std::unique_ptr<EmotiEffLibRecognizer>

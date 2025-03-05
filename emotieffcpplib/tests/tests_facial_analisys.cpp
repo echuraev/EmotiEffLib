@@ -18,6 +18,12 @@ std::vector<std::string> getOneImageExpEmotions(const std::string& backend,
     if (modelName == "enet_b0_8_va_mtl" || modelName == "enet_b0_8_best_afew") {
         return {"Anger", "Happiness", "Happiness"};
     }
+    if (modelName == "mbf_va_mtl") {
+        return {"Anger", "Contempt", "Happiness"};
+    }
+    if (modelName == "mobilevit_va_mtl") {
+        return {"Anger", "Contempt", "Fear"};
+    }
     return {"Anger", "Happiness", "Fear"};
 }
 
@@ -34,24 +40,36 @@ std::vector<cv::Mat> getOneImageFaces() {
 
 using EmotiEffLibTestParams = std::tuple<std::string, std::string>;
 
-class EmotiEffLibTests : public ::testing::TestWithParam<EmotiEffLibTestParams> {};
+class EmotiEffLibTests : public ::testing::TestWithParam<EmotiEffLibTestParams> {
+protected:
+    void SetUp() override {
+        std::tie(backend_, modelName_) = GetParam();
+        auto supportedBackends = EmotiEffLib::getAvailableBackends();
+        if (std::find(supportedBackends.begin(), supportedBackends.end(), backend_) ==
+            supportedBackends.end()) {
+            GTEST_SKIP() << "Skipping test because of unsupported backend.";
+        }
+        ext_ = (backend_ == "torch") ? ".pt" : ".onnx";
+        modelPath_ = getEmotiEffLibRootDir();
+        modelPath_ = modelPath_ / "models" / "emotieffcpplib_prepared_models";
+    }
+
+protected:
+    std::string backend_;
+    std::string modelName_;
+    std::string ext_;
+    fs::path modelPath_;
+};
 
 class EmotiEffLibOnlyModelTests : public ::testing::TestWithParam<std::string> {};
 
 TEST_P(EmotiEffLibTests, OneImagePredictionOneModel) {
-    auto& [backend, modelName] = GetParam();
     auto facialImages = getOneImageFaces();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    if (backend == "torch") {
-        modelPath /= modelName + ".pt";
-    } else {
-        modelPath /= modelName + ".onnx";
-    }
+    modelPath_ /= modelName_ + ext_;
     std::vector<std::string> emotions;
     std::vector<std::string> scorePrediction;
-    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend_, modelPath_);
     for (auto& face : facialImages) {
         auto res = fer->predictEmotions(face, true);
         emotions.push_back(res.labels[0]);
@@ -60,7 +78,7 @@ TEST_P(EmotiEffLibTests, OneImagePredictionOneModel) {
     }
 
     ASSERT_TRUE(AreVectorsEqual(emotions, scorePrediction));
-    ASSERT_TRUE(AreVectorsEqual(emotions, getOneImageExpEmotions(backend, modelName)));
+    ASSERT_TRUE(AreVectorsEqual(emotions, getOneImageExpEmotions(backend_, modelName_)));
 
     // Try to call unsuitable functions
     try {
@@ -85,17 +103,10 @@ TEST_P(EmotiEffLibTests, OneImagePredictionOneModel) {
 }
 
 TEST_P(EmotiEffLibTests, OneImageMultiPredictionOneModel) {
-    auto& [backend, modelName] = GetParam();
     auto facialImages = getOneImageFaces();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    if (backend == "torch") {
-        modelPath /= modelName + ".pt";
-    } else {
-        modelPath /= modelName + ".onnx";
-    }
-    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
+    modelPath_ /= modelName_ + ext_;
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend_, modelPath_);
     auto result = fer->predictEmotions(facialImages, true);
     auto preds = xt::argmax(result.scores, 1);
 
@@ -105,7 +116,7 @@ TEST_P(EmotiEffLibTests, OneImageMultiPredictionOneModel) {
     }
 
     ASSERT_TRUE(AreVectorsEqual(result.labels, scorePrediction));
-    ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend, modelName)));
+    ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend_, modelName_)));
 
     // Try to call unsuitable functions
     try {
@@ -130,19 +141,15 @@ TEST_P(EmotiEffLibTests, OneImageMultiPredictionOneModel) {
 }
 
 TEST_P(EmotiEffLibTests, OneImagePredictionTwoModels) {
-    auto& [backend, modelName] = GetParam();
     auto facialImages = getOneImageFaces();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string classifierPath = modelPath_ / ("classifier_" + modelName_ + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.classifierPath = classifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     std::vector<std::string> emotions;
     std::vector<std::string> scorePrediction;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
@@ -154,23 +161,19 @@ TEST_P(EmotiEffLibTests, OneImagePredictionTwoModels) {
     }
 
     ASSERT_TRUE(AreVectorsEqual(emotions, scorePrediction));
-    ASSERT_TRUE(AreVectorsEqual(emotions, getOneImageExpEmotions(backend, modelName)));
+    ASSERT_TRUE(AreVectorsEqual(emotions, getOneImageExpEmotions(backend_, modelName_)));
 }
 
 TEST_P(EmotiEffLibTests, OneImageMultiPredictionTwoModels) {
-    auto& [backend, modelName] = GetParam();
     auto facialImages = getOneImageFaces();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string classifierPath = modelPath_ / ("classifier_" + modelName_ + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.classifierPath = classifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
     auto result = fer->predictEmotions(facialImages, true);
     auto preds = xt::argmax(result.scores, 1);
@@ -181,23 +184,19 @@ TEST_P(EmotiEffLibTests, OneImageMultiPredictionTwoModels) {
     }
 
     ASSERT_TRUE(AreVectorsEqual(result.labels, scorePrediction));
-    ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend, modelName)));
+    ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend_, modelName_)));
 }
 
 TEST_P(EmotiEffLibTests, OneImageClassification) {
-    auto& [backend, modelName] = GetParam();
     auto facialImages = getOneImageFaces();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string classifierPath = modelPath_ / ("classifier_" + modelName_ + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.classifierPath = classifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
     std::vector<std::string> emotions;
     std::vector<std::string> scorePrediction;
@@ -210,23 +209,19 @@ TEST_P(EmotiEffLibTests, OneImageClassification) {
     }
 
     ASSERT_TRUE(AreVectorsEqual(emotions, scorePrediction));
-    ASSERT_TRUE(AreVectorsEqual(emotions, getOneImageExpEmotions(backend, modelName)));
+    ASSERT_TRUE(AreVectorsEqual(emotions, getOneImageExpEmotions(backend_, modelName_)));
 }
 
 TEST_P(EmotiEffLibTests, OneImageMultiClassification) {
-    auto& [backend, modelName] = GetParam();
     auto facialImages = getOneImageFaces();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string classifierPath = modelPath_ / ("classifier_" + modelName_ + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.classifierPath = classifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
     auto features = fer->extractFeatures(facialImages);
     auto result = fer->classifyEmotions(features);
@@ -238,12 +233,11 @@ TEST_P(EmotiEffLibTests, OneImageMultiClassification) {
     }
 
     ASSERT_TRUE(AreVectorsEqual(result.labels, scorePrediction));
-    ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend, modelName)));
+    ASSERT_TRUE(AreVectorsEqual(result.labels, getOneImageExpEmotions(backend_, modelName_)));
 }
 
 TEST_P(EmotiEffLibTests, AffectNetPredictionOneModel) {
     const int filesLimit = 100;
-    auto& [backend, modelName] = GetParam();
     std::string pyTestDir = getPathToPythonTestDir();
     fs::path inputsDir(pyTestDir);
     inputsDir = inputsDir / "data" / "AffectNet_val";
@@ -274,14 +268,8 @@ TEST_P(EmotiEffLibTests, AffectNetPredictionOneModel) {
         }
     }
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    if (backend == "torch") {
-        modelPath /= modelName + ".pt";
-    } else {
-        modelPath /= modelName + ".onnx";
-    }
-    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
+    modelPath_ /= modelName_ + ext_;
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend_, modelPath_);
 
     std::vector<std::string> emotions;
     for (auto& img : inputFiles) {
@@ -305,7 +293,6 @@ TEST_P(EmotiEffLibTests, AffectNetPredictionOneModel) {
 }
 
 TEST_P(EmotiEffLibTests, OnVideoOneModel) {
-    auto& [backend, modelName] = GetParam();
     std::string pyTestDir = getPathToPythonTestDir();
     fs::path videoPath(pyTestDir);
     videoPath = videoPath / "data" / "video_samples" / "emotions" / "Angry" / "Angry.mp4";
@@ -325,14 +312,8 @@ TEST_P(EmotiEffLibTests, OnVideoOneModel) {
 
     cap.release();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    if (backend == "torch") {
-        modelPath /= modelName + ".pt";
-    } else {
-        modelPath /= modelName + ".onnx";
-    }
-    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend, modelPath);
+    modelPath_ /= modelName_ + ext_;
+    auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(backend_, modelPath_);
     auto result = fer->predictEmotions(facialImgs, true);
     auto score = xt::mean(result.scores, {0});
     auto emotion_idx = xt::argmax(score)[0];
@@ -341,8 +322,7 @@ TEST_P(EmotiEffLibTests, OnVideoOneModel) {
 }
 
 TEST_P(EmotiEffLibTests, OnVideoEngagement) {
-    auto& [backend, modelName] = GetParam();
-    if (modelName.find("_b2_") != std::string::npos) {
+    if (modelName_.find("enet_b0") == std::string::npos) {
         GTEST_SKIP() << "Skipping test because of unsupported model.";
     }
     std::string pyTestDir = getPathToPythonTestDir();
@@ -364,16 +344,13 @@ TEST_P(EmotiEffLibTests, OnVideoEngagement) {
 
     cap.release();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string engagementClassifierPath = modelPath / ("engagement_classifier_2560_128" + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string engagementClassifierPath = modelPath_ / ("engagement_classifier_2560_128" + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.engagementClassifierPath = engagementClassifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
     auto result = fer->predictEngagement(facialImgs);
     auto score = xt::mean(result.scores, {0});
@@ -383,8 +360,7 @@ TEST_P(EmotiEffLibTests, OnVideoEngagement) {
 }
 
 TEST_P(EmotiEffLibTests, OnVideoDistraction) {
-    auto& [backend, modelName] = GetParam();
-    if (modelName.find("_b2_") != std::string::npos) {
+    if (modelName_.find("enet_b0") == std::string::npos) {
         GTEST_SKIP() << "Skipping test because of unsupported model.";
     }
     std::string pyTestDir = getPathToPythonTestDir();
@@ -406,16 +382,13 @@ TEST_P(EmotiEffLibTests, OnVideoDistraction) {
 
     cap.release();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string engagementClassifierPath = modelPath / ("engagement_classifier_2560_128" + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string engagementClassifierPath = modelPath_ / ("engagement_classifier_2560_128" + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.engagementClassifierPath = engagementClassifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
     auto features = fer->extractFeatures(facialImgs);
     auto result = fer->classifyEngagement(features);
@@ -426,8 +399,7 @@ TEST_P(EmotiEffLibTests, OnVideoDistraction) {
 }
 
 TEST_P(EmotiEffLibTests, OnVideoEmotionAndEngagement) {
-    auto& [backend, modelName] = GetParam();
-    if (modelName.find("_b2_") != std::string::npos) {
+    if (modelName_.find("enet_b0") == std::string::npos) {
         GTEST_SKIP() << "Skipping test because of unsupported model.";
     }
     std::string pyTestDir = getPathToPythonTestDir();
@@ -449,18 +421,15 @@ TEST_P(EmotiEffLibTests, OnVideoEmotionAndEngagement) {
 
     cap.release();
 
-    fs::path modelPath(getEmotiEffLibRootDir());
-    std::string ext = (backend == "torch") ? ".pt" : ".onnx";
-    modelPath = modelPath / "models" / "emotieffcpplib_prepared_models";
-    std::string featureExtractorPath = modelPath / ("features_extractor_" + modelName + ext);
-    std::string engagementClassifierPath = modelPath / ("engagement_classifier_2560_128" + ext);
-    std::string classifierPath = modelPath / ("classifier_" + modelName + ext);
+    std::string featureExtractorPath = modelPath_ / ("features_extractor_" + modelName_ + ext_);
+    std::string engagementClassifierPath = modelPath_ / ("engagement_classifier_2560_128" + ext_);
+    std::string classifierPath = modelPath_ / ("classifier_" + modelName_ + ext_);
     EmotiEffLib::EmotiEffLibConfig config;
-    config.backend = backend;
+    config.backend = backend_;
     config.featureExtractorPath = featureExtractorPath;
     config.classifierPath = classifierPath;
     config.engagementClassifierPath = engagementClassifierPath;
-    config.modelName = modelName;
+    config.modelName = modelName_;
     auto fer = EmotiEffLib::EmotiEffLibRecognizer::createInstance(config);
     auto features = fer->extractFeatures(facialImgs);
     auto emo_result = fer->classifyEmotions(features, true);
@@ -470,7 +439,7 @@ TEST_P(EmotiEffLibTests, OnVideoEmotionAndEngagement) {
     auto emotion_idx = xt::argmax(emo_score)[0];
     auto engagement_idx = xt::argmax(eng_score)[0];
 
-    if (modelName == "enet_b0_8_best_vgaf") {
+    if (modelName_ == "enet_b0_8_best_vgaf") {
         EXPECT_EQ(fer->getEmotionClassById(emotion_idx), "Anger");
     } else {
         EXPECT_EQ(fer->getEmotionClassById(emotion_idx), "Sadness");
@@ -490,9 +459,15 @@ std::string TestNameGenerator(const ::testing::TestParamInfo<EmotiEffLibTests::P
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    Emotions, EmotiEffLibTests,
-    ::testing::Combine(::testing::ValuesIn(EmotiEffLib::getAvailableBackends()),
-                       ::testing::ValuesIn(EmotiEffLib::getSupportedModels())),
+    EmotionsOnnx, EmotiEffLibTests,
+    ::testing::Combine(::testing::Values("onnx"),
+                       ::testing::ValuesIn(EmotiEffLib::getSupportedModels("onnx"))),
+    TestNameGenerator);
+
+INSTANTIATE_TEST_SUITE_P(
+    EmotionsTorch, EmotiEffLibTests,
+    ::testing::Combine(::testing::Values("torch"),
+                       ::testing::ValuesIn(EmotiEffLib::getSupportedModels("torch"))),
     TestNameGenerator);
 
 TEST_P(EmotiEffLibOnlyModelTests, OneImageFeatures) {
@@ -557,7 +532,7 @@ std::string OnlyModelTestNameGenerator(
 }
 
 INSTANTIATE_TEST_SUITE_P(FeaturesExtraction, EmotiEffLibOnlyModelTests,
-                         ::testing::ValuesIn(EmotiEffLib::getSupportedModels()),
+                         ::testing::ValuesIn(EmotiEffLib::getSupportedModels("generic")),
                          OnlyModelTestNameGenerator);
 
 TEST(EmotiEffLibTests, CheckUnsupportedBackend) {

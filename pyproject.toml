@@ -24,4 +24,4 @@ disable = ["too-many-instance-attributes", "fixme", "too-many-locals"]
 generated-members = ["cv2.*"]
 
 [tool.pylint."BASIC"]
-ignore-paths=["training_and_examples/", "mobile_app/"]
+ignore-paths=["training_and_examples/", "mobile_app/", "emotiefflib/backbones/"]
