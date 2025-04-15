@@ -6,21 +6,9 @@ on:
     - main
 
 jobs:
-  build:
+  trigger-binder-build:
     runs-on: ubuntu-latest
     steps:
-    - name: Delete huge unnecessary tools folder
-      run: rm -rf /opt/hostedtoolcache
-    - name: Checkout files in repo
-      uses: actions/checkout@v3
+    - uses: s-weigand/trigger-mybinder-build@v1
       with:
-        submodules: true
-        fetch-depth: 1 # shallow clone
-        ref: ${{ github.event.pull_request.head.sha }}
-
-    - name: Update jupyter dependencies with repo2docker
-      uses: jupyterhub/repo2docker-action@master
-      with:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        PUBLIC_REGISTRY_CHECK: true
+        target-repo: echuraev/EmotiEffLib/${{ github.ref }}
